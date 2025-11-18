@@ -1,29 +1,36 @@
-import React, { createContext, useContext, useState } from 'react';
-import type { RepoData } from '../client/types/entities';
+import React, { useState } from 'react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  FolderIcon,
+  GitBranchIcon,
+  PlusSignIcon,
+  DeleteIcon,
+  SettingsIcon,
+  InformationCircleIcon,
+  CalendarIcon,
+  ClockIcon,
+  DatabaseIcon,
+  CloudIcon,
+} from '@hugeicons/core-free-icons';
+import type { RepoData, WorkspaceData } from '../client/types/entities';
+import { useStore } from '../store';
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionPanel,
+} from './ui/accordion';
+import {
+  Dialog,
+  DialogPopup,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from './ui/dialog';
+import { Button } from './ui/button';
 
-// Define the context type
-interface RepoContextType {
-  repos: RepoData[];
-  selectedRepo: RepoData | null;
-  expandedFolders: Set<string>;
-  selectRepo: (path: string) => void;
-  selectWorkspace: (id: string) => void;
-  toggleFolder: (path: string) => void;
-}
-
-// Create the context
-const RepoContext = createContext<RepoContextType | undefined>(undefined);
-
-// Custom hook to use the context
-export function useRepoContext() {
-  const context = useContext(RepoContext);
-  if (!context) {
-    throw new Error('useRepoContext must be used within RepoSidebar');
-  }
-  return context;
-}
-
-// Main component
 export const RepoSidebar = ({
   repos,
   selectedRepoPath,
@@ -37,158 +44,240 @@ export const RepoSidebar = ({
   onSelectRepo: (path: string | null) => void;
   onSelectWorkspace: (id: string | null) => void;
 }) => {
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(),
-  );
+  const allRepoIds = repos.map((repo) => repo.path);
+  const workspaces = useStore((state) => state.workspaces);
+  const deleteRepo = useStore((state) => state.deleteRepo);
 
-  const selectedRepo = selectedRepoPath
-    ? repos.find((repo) => repo.path === selectedRepoPath) || null
-    : null;
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedRepoForDialog, setSelectedRepoForDialog] =
+    useState<RepoData | null>(null);
 
-  const toggleFolder = (path: string) => {
-    setExpandedFolders((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(path)) {
-        newSet.delete(path);
-      } else {
-        newSet.add(path);
-      }
-      return newSet;
-    });
+  const handleRepoInfoClick = (repo: RepoData, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedRepoForDialog(repo);
+    setDialogOpen(true);
   };
 
-  const contextValue: RepoContextType = {
-    repos,
-    selectedRepo,
-    expandedFolders,
-    selectRepo: onSelectRepo,
-    selectWorkspace: onSelectWorkspace,
-    toggleFolder,
+  const handleDeleteRepo = () => {
+    if (selectedRepoForDialog) {
+      deleteRepo(selectedRepoForDialog.path);
+      setDialogOpen(false);
+      setSelectedRepoForDialog(null);
+    }
   };
 
-  return (
-    <RepoContext.Provider value={contextValue}>
-      <div
-        className="flex flex-col h-full w-64"
-        style={{
-          backgroundColor: 'var(--bg-surface)',
-          color: 'var(--text-primary)',
-          borderRight: '1px solid var(--border-subtle)',
-        }}
-      >
-        <RepoSidebar.Header />
-        <div className="flex-1 overflow-y-auto">
-          {repos.map((repo) => (
-            <RepoSidebar.Folder key={repo.path} repo={repo} />
-          ))}
-        </div>
-        <RepoSidebar.Footer />
-      </div>
-    </RepoContext.Provider>
-  );
-};
-
-// Compound components
-RepoSidebar.Header = function Header() {
-  return (
-    <div
-      className="flex items-center justify-between p-4"
-      style={{ borderBottom: '1px solid var(--border-subtle)' }}
-    >
-      <h2 className="text-lg font-semibold">Repositories</h2>
-      <div className="flex space-x-2">
-        <button className="p-1 rounded hover:opacity-70">
-          <MinimizeIcon />
-        </button>
-        <button className="p-1 rounded hover:opacity-70">
-          <MaximizeIcon />
-        </button>
-        <button className="p-1 rounded hover:opacity-70">
-          <CloseIcon />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-RepoSidebar.Folder = function Folder({ repo }: { repo: RepoData }) {
-  const { expandedFolders, toggleFolder } = useRepoContext();
-  const isExpanded = expandedFolders.has(repo.path);
-
-  return (
-    <div>
-      <div
-        className="flex items-center justify-between p-3 cursor-pointer hover:opacity-80"
-        onClick={() => toggleFolder(repo.path)}
-      >
-        <div className="flex items-center">
-          <ChevronIcon expanded={isExpanded} />
-          <FolderIcon />
-          <span className="ml-2">{repo.name}</span>
-        </div>
-      </div>
-
-      {isExpanded && (
-        <div className="ml-4">
-          {repo.workspaceIds.map((workspaceId) => (
-            <RepoSidebar.Workspace
-              key={workspaceId}
-              workspaceId={workspaceId}
-            />
-          ))}
-          <RepoSidebar.NewWorkspace repoPath={repo.path} />
-        </div>
-      )}
-    </div>
-  );
-};
-
-RepoSidebar.Workspace = function Workspace({
-  workspaceId,
-}: {
-  workspaceId: string;
-}) {
-  const { selectWorkspace, selectedWorkspaceId } = useRepoContext();
-  const isSelected = selectedWorkspaceId === workspaceId;
-
-  // In a real implementation, we would get the workspace data from the store
-  // For now, we'll just show a placeholder
-  return (
-    <div
-      className="flex items-center p-2 pl-6 cursor-pointer hover:opacity-80"
-      style={isSelected ? { backgroundColor: '#f0f0f0' } : {}}
-      onClick={() => selectWorkspace(workspaceId)}
-    >
-      <WorkspaceIcon />
-      <span className="ml-2">{workspaceId.substring(0, 8)}</span>
-      <span className="ml-auto text-xs" style={{ color: '#666' }}>
-        main
-      </span>
-    </div>
-  );
-};
-
-RepoSidebar.NewWorkspace = function NewWorkspace({
-  repoPath,
-}: {
-  repoPath: string;
-}) {
-  const { selectWorkspace } = useRepoContext();
-
-  const handleClick = () => {
-    // In a real implementation, this would create a new workspace
-    // For now, we'll just show a placeholder
+  const handleNewWorkspace = (repoPath: string) => {
     console.log(`Create new workspace for ${repoPath}`);
   };
 
   return (
     <div
-      className="flex items-center p-2 pl-6 cursor-pointer hover:opacity-80"
-      style={{ color: '#666' }}
-      onClick={handleClick}
+      className="flex flex-col h-full w-64"
+      style={{
+        backgroundColor: 'var(--bg-surface)',
+        color: 'var(--text-primary)',
+        borderRight: '1px solid var(--border-subtle)',
+      }}
     >
-      <PlusIcon />
-      <span className="ml-2">New workspace</span>
+      <RepoSidebar.Header />
+
+      <div className="flex-1 overflow-y-auto">
+        <Accordion defaultValue={allRepoIds}>
+          {repos.map((repo) => (
+            <AccordionItem key={repo.path} value={repo.path}>
+              <AccordionTrigger className="px-3 py-2 hover:bg-opacity-50">
+                <div className="flex items-center gap-2 flex-1">
+                  <HugeiconsIcon
+                    icon={FolderIcon}
+                    size={18}
+                    strokeWidth={1.5}
+                  />
+                  <span className="font-medium text-sm">{repo.name}</span>
+                  <span
+                    className="ml-auto text-xs px-2 py-0.5 rounded"
+                    style={{
+                      backgroundColor: 'var(--bg-base)',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    {repo.workspaceIds.length}
+                  </span>
+                  <button
+                    className="p-1 rounded hover:bg-opacity-70"
+                    onClick={(e) => handleRepoInfoClick(repo, e)}
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    <HugeiconsIcon
+                      icon={InformationCircleIcon}
+                      size={16}
+                      strokeWidth={1.5}
+                    />
+                  </button>
+                </div>
+              </AccordionTrigger>
+
+              <AccordionPanel>
+                <div className="ml-4 space-y-1">
+                  <div
+                    className="flex items-center gap-2 px-3 py-2 cursor-pointer rounded hover:bg-opacity-50 transition-colors"
+                    style={{ color: 'var(--text-secondary)' }}
+                    onClick={() => handleNewWorkspace(repo.path)}
+                  >
+                    <HugeiconsIcon
+                      icon={PlusSignIcon}
+                      size={16}
+                      strokeWidth={1.5}
+                    />
+                    <span className="text-sm">New workspace</span>
+                  </div>
+
+                  {repo.workspaceIds.map((workspaceId) => {
+                    const workspace = workspaces[workspaceId];
+                    if (!workspace) return null;
+
+                    const isSelected = selectedWorkspaceId === workspaceId;
+                    const changesCount =
+                      workspace.gitState.pendingChanges.length;
+
+                    return (
+                      <div
+                        key={workspaceId}
+                        className="flex items-center gap-2 px-3 py-2 cursor-pointer rounded transition-colors"
+                        style={
+                          isSelected
+                            ? { backgroundColor: 'var(--bg-base)' }
+                            : {}
+                        }
+                        onClick={() => onSelectWorkspace(workspaceId)}
+                      >
+                        <HugeiconsIcon
+                          icon={GitBranchIcon}
+                          size={16}
+                          strokeWidth={1.5}
+                        />
+                        <span className="flex-1 text-sm">
+                          {workspace.branch}
+                        </span>
+                        {changesCount > 0 && (
+                          <span
+                            className="text-xs px-1.5 py-0.5 rounded"
+                            style={{
+                              backgroundColor: '#fef3c7',
+                              color: '#92400e',
+                            }}
+                          >
+                            {changesCount}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </AccordionPanel>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+
+      <RepoSidebar.Footer />
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogPopup>
+          <DialogHeader>
+            <DialogTitle>Repository Information</DialogTitle>
+            <DialogDescription>{selectedRepoForDialog?.name}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <InfoRow
+              icon={FolderIcon}
+              label="Path"
+              value={selectedRepoForDialog?.path || ''}
+            />
+            <InfoRow
+              icon={GitBranchIcon}
+              label="Workspaces"
+              value={`${selectedRepoForDialog?.workspaceIds.length || 0} worktrees`}
+            />
+            <InfoRow
+              icon={CloudIcon}
+              label="Remote URL"
+              value="https://github.com/user/repo.git"
+            />
+            <InfoRow icon={ClockIcon} label="Last Commit" value="2 hours ago" />
+            <InfoRow
+              icon={DatabaseIcon}
+              label="Repository Size"
+              value="12.5 MB"
+            />
+            <InfoRow
+              icon={CalendarIcon}
+              label="Created"
+              value={new Date().toLocaleDateString()}
+            />
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteRepo}
+              className="gap-2"
+            >
+              <HugeiconsIcon icon={DeleteIcon} size={16} strokeWidth={1.5} />
+              Delete Repository
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
+    </div>
+  );
+};
+
+function InfoRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: any;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <HugeiconsIcon
+        icon={icon}
+        size={16}
+        strokeWidth={1.5}
+        style={{ color: 'var(--text-secondary)', marginTop: '2px' }}
+      />
+      <div className="flex-1 min-w-0">
+        <div
+          className="text-xs font-medium mb-0.5"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          {label}
+        </div>
+        <div
+          className="text-sm break-all"
+          style={{ color: 'var(--text-primary)' }}
+        >
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+RepoSidebar.Header = function Header() {
+  return (
+    <div
+      className="flex items-center justify-between px-4 py-3"
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
+    >
+      <h2 className="text-base font-semibold">Repositories</h2>
     </div>
   );
 };
@@ -196,138 +285,21 @@ RepoSidebar.NewWorkspace = function NewWorkspace({
 RepoSidebar.Footer = function Footer() {
   return (
     <div
-      className="p-3 flex justify-between"
+      className="px-3 py-2 flex gap-2"
       style={{ borderTop: '1px solid var(--border-subtle)' }}
     >
-      <button className="p-2 rounded hover:opacity-70">
-        <AddRepoIcon />
+      <button
+        className="p-2 rounded hover:bg-opacity-70 transition-colors"
+        style={{ color: 'var(--text-secondary)' }}
+      >
+        <HugeiconsIcon icon={PlusSignIcon} size={18} strokeWidth={1.5} />
       </button>
-      <button className="p-2 rounded hover:opacity-70">
-        <SettingsIcon />
+      <button
+        className="p-2 rounded hover:bg-opacity-70 transition-colors"
+        style={{ color: 'var(--text-secondary)' }}
+      >
+        <HugeiconsIcon icon={SettingsIcon} size={18} strokeWidth={1.5} />
       </button>
     </div>
   );
 };
-
-// Icons (simple SVG implementations)
-function ChevronIcon({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      className={`transform transition-transform ${expanded ? 'rotate-90' : ''}`}
-    >
-      <path
-        fill="currentColor"
-        d="M6 12l4-4-4-4"
-        stroke="currentColor"
-        strokeWidth="1"
-        fill="none"
-      />
-    </svg>
-  );
-}
-
-function FolderIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16">
-      <path
-        fill="currentColor"
-        d="M14 5v8H2V3h5l2 2h5z"
-        stroke="currentColor"
-        strokeWidth="1"
-        fill="none"
-      />
-    </svg>
-  );
-}
-
-function WorkspaceIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16">
-      <rect
-        x="3"
-        y="3"
-        width="10"
-        height="10"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16">
-      <path
-        fill="currentColor"
-        d="M8 3v10M3 8h10"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-    </svg>
-  );
-}
-
-function AddRepoIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16">
-      <path fill="currentColor" d="M14 7H9V2H7v5H2v2h5v5h2V9h5V7z" />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" r="2" fill="currentColor" />
-      <circle cx="12" cy="8" r="1" fill="currentColor" />
-      <circle cx="4" cy="8" r="1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function MinimizeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16">
-      <path
-        fill="currentColor"
-        d="M14 8H2"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-    </svg>
-  );
-}
-
-function MaximizeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16">
-      <rect
-        x="3"
-        y="3"
-        width="10"
-        height="10"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16">
-      <path
-        fill="currentColor"
-        d="M4 4l8 8M12 4l-8 8"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-    </svg>
-  );
-}

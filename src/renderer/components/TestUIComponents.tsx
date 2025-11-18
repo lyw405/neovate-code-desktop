@@ -79,6 +79,10 @@ import {
   EmptyMedia,
   ToastProvider,
   toastManager,
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionPanel,
 } from './ui';
 import {
   UserIcon,
@@ -107,6 +111,7 @@ export function TestUIComponents() {
   const [menuRadio, setMenuRadio] = useState('pedro');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [accordionValue, setAccordionValue] = useState<string[]>(['item-1']);
 
   const comboboxItems = [
     { value: 'apple', label: 'Apple' },
@@ -733,6 +738,128 @@ export function TestUIComponents() {
                 <div>Middle</div>
                 <Separator orientation="vertical" />
                 <div>Right</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* Accordion Section */}
+        <section className="space-y-6">
+          <h2 className="text-2xl font-semibold">Accordion</h2>
+
+          <div className="space-y-6 max-w-2xl">
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium">Single Accordion</h3>
+              <p className="text-sm text-muted-foreground">
+                Only one item can be open at a time (multiple={'{'}false{'}'})
+              </p>
+              <Accordion multiple={false} defaultValue={['item-1']}>
+                <AccordionItem value="item-1">
+                  <AccordionTrigger>Is it accessible?</AccordionTrigger>
+                  <AccordionPanel>
+                    Yes. It adheres to the WAI-ARIA design pattern.
+                  </AccordionPanel>
+                </AccordionItem>
+                <AccordionItem value="item-2">
+                  <AccordionTrigger>Is it styled?</AccordionTrigger>
+                  <AccordionPanel>
+                    Yes. It comes with default styles that matches the other
+                    components' aesthetic.
+                  </AccordionPanel>
+                </AccordionItem>
+                <AccordionItem value="item-3">
+                  <AccordionTrigger>Is it animated?</AccordionTrigger>
+                  <AccordionPanel>
+                    Yes. It's animated by default, but you can disable it if you
+                    prefer.
+                  </AccordionPanel>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium">Multiple Accordion</h3>
+              <p className="text-sm text-muted-foreground">
+                Multiple items can be open at the same time (default behavior)
+              </p>
+              <Accordion defaultValue={['feature-1', 'feature-2']}>
+                <AccordionItem value="feature-1">
+                  <AccordionTrigger>Performance</AccordionTrigger>
+                  <AccordionPanel>
+                    Built with performance in mind, using efficient rendering
+                    techniques and minimal re-renders.
+                  </AccordionPanel>
+                </AccordionItem>
+                <AccordionItem value="feature-2">
+                  <AccordionTrigger>Accessibility</AccordionTrigger>
+                  <AccordionPanel>
+                    Full keyboard navigation support and ARIA attributes for
+                    screen readers.
+                  </AccordionPanel>
+                </AccordionItem>
+                <AccordionItem value="feature-3">
+                  <AccordionTrigger>Customization</AccordionTrigger>
+                  <AccordionPanel>
+                    Easily customizable with Tailwind CSS classes and supports
+                    all standard HTML attributes.
+                  </AccordionPanel>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium">Controlled Accordion</h3>
+              <p className="text-sm text-muted-foreground">
+                Control the accordion state externally (current:{' '}
+                {accordionValue.length > 0 ? accordionValue.join(', ') : 'none'}
+                )
+              </p>
+              <Accordion
+                value={accordionValue}
+                onValueChange={setAccordionValue}
+              >
+                <AccordionItem value="item-1">
+                  <AccordionTrigger>Can I control this?</AccordionTrigger>
+                  <AccordionPanel>
+                    Yes! This accordion is controlled by React state, allowing
+                    you to programmatically control which panels are open.
+                  </AccordionPanel>
+                </AccordionItem>
+                <AccordionItem value="item-2">
+                  <AccordionTrigger>How does it work?</AccordionTrigger>
+                  <AccordionPanel>
+                    Use the value and onValueChange props to control the
+                    accordion. The value is always an array of open item values.
+                  </AccordionPanel>
+                </AccordionItem>
+                <AccordionItem value="item-3">
+                  <AccordionTrigger>Why use controlled state?</AccordionTrigger>
+                  <AccordionPanel>
+                    Controlled state gives you full control over the accordion,
+                    allowing you to sync it with other parts of your UI or save
+                    the state to localStorage.
+                  </AccordionPanel>
+                </AccordionItem>
+              </Accordion>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setAccordionValue(['item-1', 'item-2', 'item-3'])
+                  }
+                >
+                  Open All
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAccordionValue([])}
+                >
+                  Close All
+                </Button>
               </div>
             </div>
           </div>
