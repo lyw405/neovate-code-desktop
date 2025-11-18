@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { SessionData, Message } from '../client/types/entities';
+import { Button } from '@/components/ui/button';
 
 // Define the context type
 interface SessionContextType {
@@ -94,12 +95,9 @@ SessionPanel.Header = function Header() {
             {session ? `Workspace: ${session.workspaceId.substring(0, 8)}` : ''}
           </p>
         </div>
-        <button
-          className="px-3 py-1 rounded text-sm"
-          style={{ backgroundColor: '#0070f3', color: 'white' }}
-        >
+        <Button variant="default" size="sm">
           Open in Editor
-        </button>
+        </Button>
       </div>
     </div>
   );

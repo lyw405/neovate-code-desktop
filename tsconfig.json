@@ -11,7 +11,11 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "dist/renderer"
+    "outDir": "dist/renderer",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/renderer/*"]
+    }
   },
   "include": ["src/renderer/**/*", "src/shared/**/*"],
   "exclude": ["node_modules", "dist"]
