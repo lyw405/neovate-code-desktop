@@ -2,6 +2,7 @@ import { RepoSidebar } from './RepoSidebar';
 import { WorkspacePanel } from './WorkspacePanel';
 // import { WorkspaceChanges } from './WorkspaceChanges';
 // import { Terminal } from './Terminal';
+import TestComponent from '../TestComponent';
 import type { RepoData, WorkspaceData } from '../client/types/entities';
 
 export const MainLayout = ({
@@ -23,6 +24,13 @@ export const MainLayout = ({
   onSendMessage: (sessionId: string, content: string) => Promise<void>;
   onExecuteCommand: (command: string) => Promise<void>;
 }) => {
+  // Determine empty state type
+  const emptyStateType = !selectedWorkspace
+    ? repos.length === 0
+      ? 'no-repos'
+      : 'no-workspace'
+    : null;
+
   return (
     <div
       className="flex flex-col h-screen"
@@ -40,6 +48,7 @@ export const MainLayout = ({
         <div className="flex-1 flex flex-col">
           <WorkspacePanel
             workspace={selectedWorkspace}
+            emptyStateType={emptyStateType}
             onSendMessage={onSendMessage}
           />
         </div>
@@ -53,6 +62,9 @@ export const MainLayout = ({
           <Terminal onExecuteCommand={onExecuteCommand} />
         </div> */}
       </div>
+
+      {/* Test controls at the bottom */}
+      <TestComponent />
     </div>
   );
 };

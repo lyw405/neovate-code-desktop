@@ -5,7 +5,13 @@ import type {
   Message,
 } from '../client/types/entities';
 import { Button } from '@/components/ui/button';
-import { useStore } from '../store';
+import {
+  Empty,
+  EmptyMedia,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from '@/components/ui/empty';
 
 // Define the context type
 interface WorkspaceContextType {
@@ -38,9 +44,11 @@ export function useWorkspaceContext() {
 // Main component
 export const WorkspacePanel = ({
   workspace,
+  emptyStateType,
   onSendMessage,
 }: {
   workspace: WorkspaceData | null;
+  emptyStateType: 'no-repos' | 'no-workspace' | null;
   onSendMessage: (sessionId: string, content: string) => Promise<void>;
 }) => {
   const [inputValue, setInputValue] = useState('');
@@ -60,7 +68,7 @@ export const WorkspacePanel = ({
   //   : null;
 
   const allSessions: SessionData[] = [];
-  const activeSession: SessionData | null = null;
+  const activeSession = null as SessionData | null;
 
   // Update activeSessionId when workspace changes
   React.useEffect(() => {
@@ -95,12 +103,23 @@ export const WorkspacePanel = ({
   if (!workspace) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center" style={{ color: 'var(--text-secondary)' }}>
-          <p className="text-lg">No workspace selected</p>
-          <p className="text-sm mt-2">
-            Select a workspace from the sidebar to get started
-          </p>
-        </div>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              {emptyStateType === 'no-repos' ? <FolderIcon /> : <BranchIcon />}
+            </EmptyMedia>
+            <EmptyTitle>
+              {emptyStateType === 'no-repos'
+                ? 'No Repositories Yet'
+                : 'No Workspace Selected'}
+            </EmptyTitle>
+            <EmptyDescription>
+              {emptyStateType === 'no-repos'
+                ? 'Add a repository to start working with workspaces and branches'
+                : 'Select a workspace from the sidebar to start coding'}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </div>
     );
   }
@@ -415,6 +434,17 @@ WorkspacePanel.SendButton = function SendButton() {
 };
 
 // Icons
+function FolderIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16">
+      <path
+        fill="currentColor"
+        d="M1.75 2A1.75 1.75 0 000 3.75v8.5C0 13.216.784 14 1.75 14h12.5A1.75 1.75 0 0016 12.25v-6.5A1.75 1.75 0 0014.25 4H7.5L6.293 2.793A1 1 0 005.586 2H1.75zM1.5 3.75a.25.25 0 01.25-.25h3.836a.25.25 0 01.177.073L7.207 5.5h7.043a.25.25 0 01.25.25v6.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25v-8.5z"
+      />
+    </svg>
+  );
+}
+
 function BranchIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16">

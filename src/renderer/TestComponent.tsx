@@ -1,54 +1,47 @@
 // @ts-nocheck
-import React from 'react';
 import { useStore } from './store';
+import { Button } from './components/ui/button';
 
 const TestComponent = () => {
-  const { repos, workspaces, sessions, selectedRepoPath, addRepo, selectRepo } =
-    useStore();
+  const {
+    selectedRepoPath,
+    selectedWorkspaceId,
+    selectedSessionId,
+    selectRepo,
+    selectWorkspace,
+    selectSession,
+  } = useStore();
 
-  React.useEffect(() => {
-    console.log('Initial store state:', {
-      repos: Object.keys(repos),
-      workspaces: Object.keys(workspaces),
-      sessions: Object.keys(sessions),
-      selectedRepoPath,
-    });
+  const handleClearSelections = () => {
+    selectRepo(null);
+    selectWorkspace(null);
+    selectSession(null);
+    console.log('Cleared all selections');
+  };
 
-    // Test adding a repo
-    const repo = {
-      path: '/test/repo',
-      name: 'Test Repo',
-      workspaceIds: [],
-      metadata: {
-        lastAccessed: Date.now(),
-      },
-      gitRemote: {
-        originUrl: 'https://github.com/test/repo',
-        defaultBranch: 'main',
-        syncStatus: 'synced',
-      },
-    };
-
-    console.log('Adding repo...');
-    addRepo(repo);
-
-    console.log('Repo added');
-  }, []);
-
-  React.useEffect(() => {
-    console.log('Store state updated:', {
-      repos: Object.keys(repos),
-      workspaces: Object.keys(workspaces),
-      sessions: Object.keys(sessions),
-      selectedRepoPath,
-    });
-
-    if (repos['/test/repo']) {
-      console.log('Repo in store:', repos['/test/repo']);
-    }
-  }, [repos, workspaces, sessions, selectedRepoPath]);
-
-  return <div>Test Component</div>;
+  return (
+    <div
+      style={{
+        padding: '16px',
+        borderTop: '2px solid var(--border-subtle)',
+        backgroundColor: 'var(--bg-secondary)',
+      }}
+    >
+      <div style={{ marginBottom: '8px', fontSize: '14px', fontWeight: 600 }}>
+        Test Controls
+      </div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <Button onClick={handleClearSelections} variant="outline" size="sm">
+          Clear All Selections
+        </Button>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+          Repo: {selectedRepoPath || 'none'} | Workspace:{' '}
+          {selectedWorkspaceId || 'none'} | Session:{' '}
+          {selectedSessionId || 'none'}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default TestComponent;
