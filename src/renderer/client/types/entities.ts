@@ -1,5 +1,3 @@
-import type { NormalizedMessage } from './message';
-
 export interface RepoData {
   path: string;
   name: string;
@@ -20,7 +18,6 @@ export interface WorkspaceData {
   repoPath: string;
   branch: string;
   worktreePath: string;
-  sessionIds: string[];
   gitState: {
     currentCommit: string;
     isDirty: boolean;

@@ -59,7 +59,6 @@ describe('Store', () => {
       repoPath: '/test/repo',
       branch: 'main',
       worktreePath: '/test/repo',
-      sessionIds: [],
       gitState: {
         currentCommit: 'abc123',
         isDirty: false,
@@ -109,7 +108,6 @@ describe('Store', () => {
       repoPath: '/test/repo',
       branch: 'main',
       worktreePath: '/test/repo',
-      sessionIds: [],
       gitState: {
         currentCommit: 'abc123',
         isDirty: false,
@@ -163,7 +161,6 @@ describe('Store', () => {
       repoPath: '/test/repo',
       branch: 'main',
       worktreePath: '/test/repo',
-      sessionIds: [],
       gitState: {
         currentCommit: 'abc123',
         isDirty: false,

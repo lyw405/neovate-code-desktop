@@ -2,7 +2,11 @@ import { create } from 'zustand';
 import { WebSocketTransport } from './client/transport/WebSocketTransport';
 import { MessageBus } from './client/messaging/MessageBus';
 import { randomUUID } from './utils/uuid';
-import type { RepoData, WorkspaceData } from './client/types/entities';
+import type {
+  RepoData,
+  WorkspaceData,
+  SessionData,
+} from './client/types/entities';
 import type { NormalizedMessage } from './client/types/message';
 
 interface StoreState {
@@ -15,6 +19,7 @@ interface StoreState {
   // Entity data
   repos: Record<string, RepoData>;
   workspaces: Record<string, WorkspaceData>;
+  sessions: Record<string, SessionData[]>;
   messages: NormalizedMessage[];
 
   // Processing state
@@ -49,6 +54,7 @@ interface StoreActions {
   deleteWorkspace: (id: string) => void;
 
   // Sessions
+  setSessions: (workspaceId: string, sessions: SessionData[]) => void;
   addMessage: (message: NormalizedMessage) => void;
   setMessages: (messages: NormalizedMessage[]) => void;
 
@@ -68,9 +74,9 @@ const useStore = create<Store>()((set, get) => ({
   initialized: false,
 
   // Initial entity data
-  // Initial entity data
   repos: {},
   workspaces: {},
+  sessions: {},
   messages: [],
 
   // Initial processing state
@@ -411,7 +417,15 @@ const useStore = create<Store>()((set, get) => ({
   },
 
   // Sessions
-  // Sessions
+  setSessions: (workspaceId: string, sessions: SessionData[]) => {
+    set((state) => ({
+      sessions: {
+        ...state.sessions,
+        [workspaceId]: sessions,
+      },
+    }));
+  },
+
   addMessage: (message: NormalizedMessage) => {
     set((state) => ({
       messages: [...state.messages, message],

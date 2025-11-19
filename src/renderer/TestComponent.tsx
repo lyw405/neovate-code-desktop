@@ -8,6 +8,7 @@ const TestComponent = () => {
     selectedWorkspaceId,
     selectedSessionId,
     workspaces,
+    sessions,
     selectRepo,
     selectWorkspace,
     selectSession,
@@ -59,8 +60,10 @@ const TestComponent = () => {
             <div>Branch: {workspaces[selectedWorkspaceId].branch}</div>
             <div>Path: {workspaces[selectedWorkspaceId].worktreePath}</div>
             <div>
-              Session IDs:{' '}
-              {workspaces[selectedWorkspaceId].sessionIds?.join(', ') || 'None'}
+              Sessions:{' '}
+              {sessions[selectedWorkspaceId]
+                ?.map((s) => s.sessionId.substring(0, 8))
+                .join(', ') || 'None'}
             </div>
           </div>
         </div>

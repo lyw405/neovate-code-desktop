@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { WorkspaceData, SessionData } from '../client/types/entities';
 import type { NormalizedMessage } from '../client/types/message';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from '@/components/ui/empty';
+import { useStore } from '../store';
 
 // Define the context type
 interface WorkspaceContextType {
@@ -52,34 +53,73 @@ export const WorkspacePanel = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(
-    workspace?.sessionIds[0] || null,
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  // Get store actions and state
+  const request = useStore((state) => state.request);
+  const setSessions = useStore((state) => state.setSessions);
+  const selectedWorkspaceId = useStore((state) => state.selectedWorkspaceId);
+  const workspaces = useStore((state) => state.workspaces);
+  const sessionsMap = useStore((state) => state.sessions);
+
+  // Get sessions for the current workspace from store - memoized to avoid infinite loop
+  const allSessions = useMemo(
+    () => (selectedWorkspaceId ? sessionsMap[selectedWorkspaceId] || [] : []),
+    [selectedWorkspaceId, sessionsMap],
   );
 
-  // // Fetch all sessions from the store
-  // const allSessions = workspace?.sessionIds
-  //   .map(id => useStore(state => state.sessions[id]))
-  //   .filter(Boolean) as SessionData[] || [];
+  const activeSession =
+    allSessions.find((s) => s.sessionId === activeSessionId) || null;
 
-  // // Get the active session
-  // const activeSession = activeSessionId
-  //   ? useStore(state => state.sessions[activeSessionId])
-  //   : null;
+  // Fetch sessions when selectedWorkspaceId changes
+  useEffect(() => {
+    if (!selectedWorkspaceId) {
+      setActiveSessionId(null);
+      return;
+    }
 
-  const allSessions: SessionData[] = [];
-  const activeSession = null as SessionData | null;
+    const workspace = workspaces[selectedWorkspaceId];
+    if (!workspace) {
+      setActiveSessionId(null);
+      return;
+    }
 
-  // Update activeSessionId when workspace changes
-  React.useEffect(() => {
-    if (workspace) {
-      // If no active session or active session doesn't belong to this workspace
-      if (!activeSessionId || !workspace.sessionIds.includes(activeSessionId)) {
-        setActiveSessionId(workspace.sessionIds[0] || null);
+    const fetchSessions = async () => {
+      try {
+        const response = await request<
+          { cwd: string },
+          { success: boolean; data: { sessions: SessionData[] } }
+        >('sessions.list', { cwd: workspace.worktreePath });
+
+        if (response.success) {
+          setSessions(selectedWorkspaceId, response.data.sessions);
+        }
+      } catch (error) {
+        console.error('Failed to fetch sessions:', error);
+        setSessions(selectedWorkspaceId, []);
+      }
+    };
+
+    fetchSessions();
+  }, [selectedWorkspaceId, workspaces, request, setSessions]);
+
+  // Validate activeSessionId when sessions load
+  useEffect(() => {
+    if (allSessions.length > 0) {
+      // If no active session or it doesn't exist in the list, set to first session
+      if (
+        !activeSessionId ||
+        !allSessions.find((s) => s.sessionId === activeSessionId)
+      ) {
+        setActiveSessionId(allSessions[0].sessionId);
       }
     } else {
-      setActiveSessionId(null);
+      // No sessions, reset activeSessionId
+      if (activeSessionId !== null) {
+        setActiveSessionId(null);
+      }
     }
-  }, [workspace, activeSessionId]);
+  }, [allSessions, activeSessionId]);
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -284,7 +324,7 @@ WorkspacePanel.WorkspaceInfo = function WorkspaceInfo() {
 };
 
 WorkspacePanel.Messages = function Messages() {
-  const { messages, activeSessionId } = useWorkspaceContext();
+  const { messages } = useWorkspaceContext();
 
   // if (!activeSessionId) {
   //   return (
