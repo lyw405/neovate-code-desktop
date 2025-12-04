@@ -110,10 +110,9 @@ export const WorkspacePanel = ({
 
     const fetchSessions = async () => {
       try {
-        const response = await request<
-          { cwd: string },
-          { success: boolean; data: { sessions: SessionData[] } }
-        >('sessions.list', { cwd: workspace.worktreePath });
+        const response = await request('sessions.list', {
+          cwd: workspace.worktreePath,
+        });
 
         if (response.success) {
           setSessions(selectedWorkspaceId, response.data.sessions);
@@ -154,10 +153,7 @@ export const WorkspacePanel = ({
 
     const fetchMessages = async () => {
       try {
-        const response = await request<
-          { cwd: string; sessionId: string },
-          { success: boolean; data: { messages: NormalizedMessage[] } }
-        >('session.messages.list', {
+        const response = await request('session.messages.list', {
           cwd: workspace.worktreePath,
           sessionId: selectedSessionId,
         });
@@ -274,10 +270,7 @@ WorkspacePanel.Header = function Header() {
 
   const handleMerge = async () => {
     try {
-      const response = await request<
-        { cwd: string; name: string },
-        { success: boolean; error?: string }
-      >('project.workspaces.merge', {
+      const response = await request('project.workspaces.merge', {
         cwd: workspace.repoPath,
         name: workspace.id,
       });

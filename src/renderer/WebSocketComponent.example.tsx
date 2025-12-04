@@ -27,10 +27,7 @@ function WebSocketComponent() {
   // Make a request to the server
   const handleRequest = async () => {
     try {
-      const response = await request<{ cwd: string }, { paths: string[] }>(
-        'utils.getPaths',
-        { cwd: '/tmp' },
-      );
+      const response = await request('utils.getPaths', { cwd: '/tmp' });
       console.log('Response:', response);
     } catch (error) {
       console.error('Request failed:', error);

@@ -112,14 +112,7 @@ export const RepoSidebar = ({
 
     try {
       // Step 1: Create workspace
-      const createResponse = await request<
-        { cwd: string; skipUpdate: boolean },
-        {
-          success: boolean;
-          error?: string;
-          data?: { workspace: { name: string; path: string; branch: string } };
-        }
-      >('project.workspaces.create', {
+      const createResponse = await request('project.workspaces.create', {
         cwd: repoPath,
         skipUpdate: true,
       });
@@ -144,10 +137,7 @@ export const RepoSidebar = ({
         return;
       }
 
-      const fetchResponse = await request<
-        { cwd: String; workspaceId: string },
-        { success: boolean; error?: string; data?: WorkspaceData }
-      >('project.workspaces.get', {
+      const fetchResponse = await request('project.workspaces.get', {
         cwd: repoPath,
         workspaceId,
       });
@@ -350,7 +340,9 @@ export const RepoSidebar = ({
             <InfoRow
               icon={GitBranchIcon}
               label="Workspaces"
-              value={`${selectedRepoForDialog?.workspaceIds.length || 0} worktrees`}
+              value={`${
+                selectedRepoForDialog?.workspaceIds.length || 0
+              } worktrees`}
             />
             <InfoRow
               icon={CloudIcon}

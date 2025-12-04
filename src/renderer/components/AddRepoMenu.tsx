@@ -55,10 +55,9 @@ export const AddRepoMenu = ({ children }: AddRepoMenuProps) => {
       }
 
       // Request repository info from the backend
-      const response = await request<{ cwd: string }, GetRepoInfoResponse>(
-        'project.getRepoInfo',
-        { cwd: selectedPath },
-      );
+      const response = await request('project.getRepoInfo', {
+        cwd: selectedPath,
+      });
 
       if (response.success && response.data?.repoData) {
         const repoData = response.data.repoData;
@@ -68,10 +67,9 @@ export const AddRepoMenu = ({ children }: AddRepoMenuProps) => {
 
         // Fetch and add workspaces for this repository
         try {
-          const workspacesResponse = await request<
-            { cwd: string },
-            GetWorkspacesInfoResponse
-          >('project.workspaces.list', { cwd: selectedPath });
+          const workspacesResponse = await request('project.workspaces.list', {
+            cwd: selectedPath,
+          });
 
           if (
             workspacesResponse.success &&

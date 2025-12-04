@@ -8,6 +8,12 @@ import type {
   SessionData,
 } from './client/types/entities';
 import type { NormalizedMessage } from './client/types/message';
+import type {
+  HandlerMap,
+  HandlerMethod,
+  HandlerInput,
+  HandlerOutput,
+} from './nodeBridge.types';
 
 type WorkspaceId = string;
 type SessionId = string;
@@ -41,7 +47,10 @@ interface StoreActions {
   // WebSocket actions
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
-  request: <T, R>(method: string, params: T) => Promise<R>;
+  request: <K extends HandlerMethod>(
+    method: K,
+    params: HandlerInput<K>,
+  ) => Promise<HandlerOutput<K>>;
   onEvent: <T>(event: string, handler: (data: T) => void) => void;
   initialize: () => Promise<void>;
   sendMessage: (params: { message: string }) => Promise<void>;
@@ -157,7 +166,10 @@ const useStore = create<Store>()((set, get) => ({
     });
   },
 
-  request: <T, R>(method: string, params: T): Promise<R> => {
+  request: <K extends HandlerMethod>(
+    method: K,
+    params: HandlerInput<K>,
+  ): Promise<HandlerOutput<K>> => {
     const { messageBus, state } = get();
 
     if (state !== 'connected' || !messageBus) {
@@ -166,7 +178,10 @@ const useStore = create<Store>()((set, get) => ({
       );
     }
 
-    return messageBus.request<T, R>(method, params);
+    return messageBus.request<HandlerInput<K>, HandlerOutput<K>>(
+      method,
+      params,
+    );
   },
 
   onEvent: <T,>(event: string, handler: (data: T) => void) => {
@@ -262,15 +277,7 @@ const useStore = create<Store>()((set, get) => ({
         .map((m) => m.content)
         .slice(0, 10)
         .join('\n');
-      const summary = await request<
-        { message: string; cwd: string; model?: string },
-        {
-          success: boolean;
-          data: {
-            text: string;
-          };
-        }
-      >('utils.summarizeMessage', {
+      const summary = await request('utils.summarizeMessage', {
         message: params.message,
         cwd,
       });
