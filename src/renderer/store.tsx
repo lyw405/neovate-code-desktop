@@ -748,7 +748,10 @@ const useStore = create<Store>()((set, get) => ({
         cwd: workspace.worktreePath,
       });
       if (response.success) {
-        const commands = response.data.slashCommands;
+        const commands = response.data.slashCommands.map((cmd: any) => ({
+          name: cmd.command.name,
+          description: cmd.command.description,
+        }));
         set((state) => ({
           slashCommandsByWorkspace: {
             ...state.slashCommandsByWorkspace,

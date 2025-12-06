@@ -116,15 +116,13 @@ const TestComponent = () => {
                 <div style={{ display: 'grid', gap: '4px' }}>
                   {slashCommandsByWorkspace[selectedWorkspaceId].map(
                     (cmd, index) => (
-                      <div key={cmd.command.name}>
+                      <div key={`${index}-${cmd.name}`}>
                         {/* <span>{JSON.stringify(cmd)}</span> */}
-                        <span style={{ fontWeight: 600 }}>
-                          /{cmd.command.name}
-                        </span>
-                        {cmd.command.description && (
+                        <span style={{ fontWeight: 600 }}>/{cmd.name}</span>
+                        {cmd.description && (
                           <span style={{ color: 'var(--text-tertiary)' }}>
                             {' '}
-                            - {cmd.command.description}
+                            - {cmd.description}
                           </span>
                         )}
                       </div>
