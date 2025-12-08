@@ -17,6 +17,7 @@ interface PersistedState {
   selectedRepoPath: string | null;
   selectedWorkspaceId: string | null;
   selectedSessionId: string | null;
+  sessions: Record<string, any>;
 }
 
 // Debounce helper
@@ -67,6 +68,7 @@ export function setupPersistence(store: StoreApi<any>): void {
       selectedRepoPath: state.selectedRepoPath || null,
       selectedWorkspaceId: state.selectedWorkspaceId || null,
       selectedSessionId: state.selectedSessionId || null,
+      sessions: state.sessions || {},
     };
   };
 
@@ -115,6 +117,7 @@ export async function hydrateStore(store: StoreApi<any>): Promise<boolean> {
       selectedRepoPath = null,
       selectedWorkspaceId = null,
       selectedSessionId = null,
+      sessions = {},
     } = persistedState;
 
     // Validate selections exist in loaded entities
@@ -152,6 +155,7 @@ export async function hydrateStore(store: StoreApi<any>): Promise<boolean> {
       {
         repos,
         workspaces,
+        sessions,
 
         selectedRepoPath: validatedRepoPath,
         selectedWorkspaceId: validatedWorkspaceId,
