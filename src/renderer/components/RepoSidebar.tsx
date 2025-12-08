@@ -280,7 +280,7 @@ export const RepoSidebar = ({
                       const workspaceSessions = (sessions[workspaceId] || [])
                         .slice()
                         .sort((a, b) => b.modified - a.modified);
-                      const expandKey = `${repo.path}-${workspaceId}`;
+                      const expandKey = `${workspaceId}`;
                       const isExpanded = expandedSessions[expandKey] ?? false;
                       const visibleSessions = isExpanded
                         ? workspaceSessions
