@@ -252,7 +252,7 @@ export const WorkspacePanel = ({
         style={{ backgroundColor: 'var(--bg-primary)' }}
       >
         <WorkspacePanel.Header />
-        <WorkspacePanel.SessionTabs />
+        {/* <WorkspacePanel.SessionTabs /> */}
         {/* <WorkspacePanel.WorkspaceInfo /> */}
         <WorkspacePanel.Messages />
         <div

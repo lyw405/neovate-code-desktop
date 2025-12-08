@@ -84,6 +84,7 @@ export const RepoSidebar = ({
   const addWorkspace = useStore((state) => state.addWorkspace);
   const selectWorkspace = useStore((state) => state.selectWorkspace);
   const selectSession = useStore((state) => state.selectSession);
+  const createSession = useStore((state) => state.createSession);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
@@ -336,91 +337,124 @@ export const RepoSidebar = ({
                           </div>
 
                           {/* Session list */}
-                          {workspaceSessions.length > 0 && (
-                            <div className="ml-4">
-                              {visibleSessions.map((session) => {
-                                const isSessionSelected =
-                                  selectedSessionId === session.sessionId;
-                                const displaySummary =
-                                  session.summary && session.summary.length > 20
-                                    ? `${session.summary.slice(0, 20)}…`
-                                    : session.summary || 'New session';
+                          <div className="ml-4">
+                            {/* Create session button */}
+                            <button
+                              className="flex items-center gap-2 px-3 py-1.5 cursor-pointer rounded transition-colors w-full text-left"
+                              style={{
+                                color: 'var(--text-tertiary)',
+                                backgroundColor: 'transparent',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  'var(--bg-base-hover)';
+                                e.currentTarget.style.color =
+                                  'var(--text-secondary)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  'transparent';
+                                e.currentTarget.style.color =
+                                  'var(--text-tertiary)';
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectWorkspace(workspaceId);
+                                createSession();
+                              }}
+                            >
+                              <HugeiconsIcon
+                                icon={PlusSignIcon}
+                                size={14}
+                                strokeWidth={1.5}
+                              />
+                              <span className="text-xs font-medium">
+                                New session
+                              </span>
+                            </button>
 
-                                return (
-                                  <div
-                                    key={session.sessionId}
-                                    className="flex items-center gap-2 px-3 py-1.5 cursor-pointer rounded transition-colors"
-                                    style={{
-                                      backgroundColor: isSessionSelected
-                                        ? 'var(--bg-base)'
-                                        : 'transparent',
-                                      color: isSessionSelected
-                                        ? 'var(--text-primary)'
-                                        : 'var(--text-tertiary)',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      if (!isSessionSelected) {
-                                        e.currentTarget.style.backgroundColor =
-                                          'var(--bg-base-hover)';
-                                      }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      if (!isSessionSelected) {
-                                        e.currentTarget.style.backgroundColor =
-                                          'transparent';
-                                      }
-                                    }}
-                                    onClick={() => {
-                                      selectWorkspace(workspaceId);
-                                      selectSession(session.sessionId);
-                                    }}
-                                  >
-                                    <HugeiconsIcon
-                                      icon={Comment01Icon}
-                                      size={14}
-                                      strokeWidth={1.5}
-                                    />
-                                    <span className="flex-1 text-xs truncate">
-                                      {displaySummary}
-                                    </span>
-                                    <span
-                                      className="text-xs"
-                                      style={{ color: 'var(--text-tertiary)' }}
-                                    >
-                                      {formatRelativeTime(session.modified)}
-                                    </span>
-                                  </div>
-                                );
-                              })}
+                            {visibleSessions.map((session) => {
+                              const isSessionSelected =
+                                selectedSessionId === session.sessionId;
+                              const displaySummary =
+                                session.summary && session.summary.length > 20
+                                  ? `${session.summary.slice(0, 20)}…`
+                                  : session.summary || 'New session';
 
-                              {/* Show more/less toggle */}
-                              {hiddenCount > 0 && (
-                                <button
-                                  className="px-3 py-1 text-xs cursor-pointer transition-colors"
-                                  style={{ color: 'var(--text-tertiary)' }}
+                              return (
+                                <div
+                                  key={session.sessionId}
+                                  className="flex items-center gap-2 px-3 py-1.5 cursor-pointer rounded transition-colors"
+                                  style={{
+                                    backgroundColor: isSessionSelected
+                                      ? 'var(--bg-base)'
+                                      : 'transparent',
+                                    color: isSessionSelected
+                                      ? 'var(--text-primary)'
+                                      : 'var(--text-tertiary)',
+                                  }}
                                   onMouseEnter={(e) => {
-                                    e.currentTarget.style.color =
-                                      'var(--text-secondary)';
+                                    if (!isSessionSelected) {
+                                      e.currentTarget.style.backgroundColor =
+                                        'var(--bg-base-hover)';
+                                    }
                                   }}
                                   onMouseLeave={(e) => {
-                                    e.currentTarget.style.color =
-                                      'var(--text-tertiary)';
+                                    if (!isSessionSelected) {
+                                      e.currentTarget.style.backgroundColor =
+                                        'transparent';
+                                    }
                                   }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setExpandedSessions((prev) => ({
-                                      ...prev,
-                                      [expandKey]: !prev[expandKey],
-                                    }));
+                                  onClick={() => {
+                                    selectWorkspace(workspaceId);
+                                    selectSession(session.sessionId);
                                   }}
                                 >
-                                  {isExpanded
-                                    ? 'Show less'
-                                    : `Show ${hiddenCount} more`}
-                                </button>
-                              )}
-                            </div>
-                          )}
+                                  <HugeiconsIcon
+                                    icon={Comment01Icon}
+                                    size={14}
+                                    strokeWidth={1.5}
+                                  />
+                                  <span className="flex-1 text-xs truncate">
+                                    {displaySummary}
+                                  </span>
+                                  <span
+                                    className="text-xs"
+                                    style={{ color: 'var(--text-tertiary)' }}
+                                  >
+                                    {formatRelativeTime(session.modified)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+
+                            {/* Show more/less toggle */}
+                            {hiddenCount > 0 && (
+                              <button
+                                className="px-3 py-1 text-xs cursor-pointer transition-colors"
+                                style={{ color: 'var(--text-tertiary)' }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color =
+                                    'var(--text-secondary)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color =
+                                    'var(--text-tertiary)';
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedSessions((prev) => ({
+                                    ...prev,
+                                    [expandKey]: !prev[expandKey],
+                                  }));
+                                }}
+                              >
+                                {isExpanded
+                                  ? 'Show less'
+                                  : `Show ${hiddenCount} more`}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
