@@ -396,6 +396,17 @@ type SessionMessagesListOutput = {
   };
 };
 
+type SessionGetModelInput = {
+  cwd: string;
+  sessionId: string;
+};
+type SessionGetModelOutput = {
+  success: boolean;
+  data: {
+    model: string | null;
+  };
+};
+
 type SessionSendInput = {
   message: string | null;
   cwd: string;
@@ -483,6 +494,19 @@ type SessionConfigRemoveDirectoryInput = {
   cwd: string;
   sessionId: string;
   directory: string;
+};
+
+type SessionConfigSetInput = {
+  cwd: string;
+  sessionId: string;
+  key: string;
+  value: any;
+};
+
+type SessionConfigRemoveInput = {
+  cwd: string;
+  sessionId: string;
+  key: string;
 };
 
 // ============================================================================
@@ -653,8 +677,10 @@ type ToolApprovalInput = {
   toolUse: ToolUse;
   category?: ApprovalCategory;
 };
+
 type ToolApprovalOutput = {
-  approved: any;
+  approved: boolean;
+  params?: Record<string, unknown>;
 };
 
 // ============================================================================
@@ -744,6 +770,10 @@ export type HandlerMap = {
     input: SessionMessagesListInput;
     output: SessionMessagesListOutput;
   };
+  'session.getModel': {
+    input: SessionGetModelInput;
+    output: SessionGetModelOutput;
+  };
   'session.send': { input: SessionSendInput; output: SessionSendOutput };
   'session.cancel': { input: SessionCancelInput; output: SuccessResponse };
   'session.addMessages': {
@@ -784,6 +814,14 @@ export type HandlerMap = {
   };
   'session.config.removeDirectory': {
     input: SessionConfigRemoveDirectoryInput;
+    output: SuccessResponse;
+  };
+  'session.config.set': {
+    input: SessionConfigSetInput;
+    output: SuccessResponse;
+  };
+  'session.config.remove': {
+    input: SessionConfigRemoveInput;
     output: SuccessResponse;
   };
 
