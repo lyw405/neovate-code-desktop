@@ -83,10 +83,11 @@ export function useInputHandlers({
   }, [fileSuggestion, inputState, value]);
 
   const handleSubmit = useCallback(() => {
+    // When suggestions are visible, Enter only applies the suggestion without submitting
     if (slashCommands.suggestions.length > 0) {
       const completed = slashCommands.getCompletedCommand();
-      inputState.reset();
-      onSubmit(completed);
+      inputState.setValue(completed);
+      inputState.setCursorPosition(completed.length);
       return;
     }
 

@@ -89,8 +89,11 @@ export function ChatInput({
     } as React.KeyboardEvent<HTMLTextAreaElement>);
   };
 
+  const isSuggestionVisible = suggestions.type !== null;
+
   const handleSendClick = () => {
-    if (canSend && !disabled) {
+    // Prevent submission when suggestions are visible
+    if (canSend && !disabled && !isSuggestionVisible) {
       const submitEvent = {
         key: 'Enter',
         preventDefault: () => {},
