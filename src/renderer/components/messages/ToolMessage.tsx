@@ -81,6 +81,38 @@ function extractValue(
 }
 
 /**
+ * Calculate diff stats (additions and deletions) between two strings
+ */
+function calculateDiffStats(
+  originalContent: string,
+  newContent: string,
+): { additions: number; deletions: number } {
+  const originalLines = originalContent.split('\n');
+  const newLines = newContent.split('\n');
+
+  // Simple line-based diff calculation
+  const originalSet = new Set(originalLines);
+  const newSet = new Set(newLines);
+
+  let additions = 0;
+  let deletions = 0;
+
+  for (const line of newLines) {
+    if (!originalSet.has(line)) {
+      additions++;
+    }
+  }
+
+  for (const line of originalLines) {
+    if (!newSet.has(line)) {
+      deletions++;
+    }
+  }
+
+  return { additions, deletions };
+}
+
+/**
  * ToolMessage component
  * Renders a tool use paired with its result (if available)
  */
@@ -128,6 +160,44 @@ export function ToolMessage({ pair }: ToolMessageProps) {
             {toolUse.description}
           </span>
         )}
+        {/* Diff stats for diff_viewer */}
+        {toolResult &&
+          !toolResult.result.isError &&
+          toolResult.result.returnDisplay &&
+          typeof toolResult.result.returnDisplay === 'object' &&
+          toolResult.result.returnDisplay.type === 'diff_viewer' &&
+          (() => {
+            const originalContent =
+              extractValue(
+                toolUse.input.old_string || toolUse.input.originalContent,
+                toolUse.input,
+              ) || '';
+            const newContent =
+              extractValue(
+                toolUse.input.new_string || toolUse.input.content,
+                toolUse.input,
+              ) || '';
+            const { additions, deletions } = calculateDiffStats(
+              originalContent,
+              newContent,
+            );
+            return (
+              <span style={{ marginLeft: '8px', fontSize: '13px' }}>
+                <span style={{ color: '#22c55e', fontWeight: 500 }}>
+                  +{additions}
+                </span>
+                <span
+                  style={{
+                    marginLeft: '6px',
+                    color: '#ef4444',
+                    fontWeight: 500,
+                  }}
+                >
+                  -{deletions}
+                </span>
+              </span>
+            );
+          })()}
         {!toolResult && (
           <span
             style={{
