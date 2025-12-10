@@ -18,7 +18,6 @@ import {
   NoteIcon,
 } from '@hugeicons/core-free-icons';
 import { useInputHandlers } from '../../hooks/useInputHandlers';
-import { useInputStore } from '../../store/inputStore';
 import { SuggestionDropdown } from './SuggestionDropdown';
 import { ImagePreview } from './ImagePreview';
 import { Textarea, Tooltip, TooltipTrigger, TooltipPopup, Button } from '../ui';
@@ -57,7 +56,8 @@ interface ChatInputProps {
   disabled?: boolean;
   isProcessing?: boolean;
   modelName?: string;
-  sessionId?: string;
+  sessionId?: string | null;
+  workspaceId?: string | null;
   cwd?: string;
   request?: <K extends HandlerMethod>(
     method: K,
@@ -87,7 +87,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       disabled = false,
       isProcessing = false,
       modelName,
-      sessionId,
+      sessionId = null,
+      workspaceId = null,
       cwd,
       request,
     },
@@ -106,8 +107,20 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       }),
       [],
     );
-    const { planMode, thinking, togglePlanMode, toggleThinking } =
-      useInputStore();
+
+    const { inputState, mode, handlers, suggestions, imageManager } =
+      useInputHandlers({
+        sessionId,
+        workspaceId,
+        onSubmit,
+        onCancel,
+        onShowForkModal,
+        fetchPaths,
+        fetchCommands,
+        isProcessing,
+      });
+
+    const { planMode, thinking, togglePlanMode, toggleThinking } = inputState;
 
     // State for session config model (fetched from session)
     const [sessionConfigModel, setSessionConfigModel] = useState<string | null>(
@@ -274,16 +287,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       },
       [request, cwd, sessionId, providerValue, currentProvider],
     );
-
-    const { inputState, mode, handlers, suggestions, imageManager } =
-      useInputHandlers({
-        onSubmit,
-        onCancel,
-        onShowForkModal,
-        fetchPaths,
-        fetchCommands,
-        isProcessing,
-      });
 
     const { value } = inputState.state;
     const canSend = value.trim().length > 0;

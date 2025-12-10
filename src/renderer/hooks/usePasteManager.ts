@@ -1,5 +1,4 @@
 import { useCallback, useRef } from 'react';
-import { useInputStore } from '../store/inputStore';
 
 export interface PasteResult {
   success: boolean;
@@ -12,8 +11,10 @@ function getPastedTextPrompt(text: string, pasteId: string): string {
   return `[Pasted text ${pasteId} ${lineCount} lines]`;
 }
 
-export function usePasteManager() {
-  const { pastedTextMap, setPastedTextMap } = useInputStore();
+export function usePasteManager(
+  pastedTextMap: Record<string, string>,
+  setPastedTextMap: (map: Record<string, string>) => void,
+) {
   const counterRef = useRef(0);
 
   const generatePasteId = useCallback(() => `#${++counterRef.current}`, []);

@@ -1,5 +1,4 @@
 import { useCallback, useState, useRef } from 'react';
-import { useInputStore, getInputMode } from '../store/inputStore';
 import { useInputState } from './useInputState';
 import { useFileSuggestion } from './useFileSuggestion';
 import { useSlashCommands, type SlashCommand } from './useSlashCommands';
@@ -11,6 +10,8 @@ import { toastManager } from '../components/ui/toast';
 const LARGE_PASTE_THRESHOLD = 800;
 
 interface UseInputHandlersProps {
+  sessionId: string | null;
+  workspaceId: string | null;
   onSubmit: (value: string, images?: string[]) => void;
   onCancel: () => void;
   onShowForkModal: () => void;
@@ -20,6 +21,8 @@ interface UseInputHandlersProps {
 }
 
 export function useInputHandlers({
+  sessionId,
+  workspaceId,
   onSubmit,
   onCancel,
   onShowForkModal,
@@ -27,22 +30,24 @@ export function useInputHandlers({
   fetchCommands,
   isProcessing,
 }: UseInputHandlersProps) {
-  const inputState = useInputState();
+  const inputState = useInputState(sessionId, workspaceId);
   const { value, cursorPosition, mode } = inputState.state;
 
   const {
     historyIndex,
     history,
     draftInput,
-    queuedMessages,
     planMode,
     setHistoryIndex,
     setDraftInput,
     addToHistory,
-    clearQueue,
     togglePlanMode,
     toggleThinking,
-  } = useInputStore();
+    pastedTextMap,
+    pastedImageMap,
+    setPastedTextMap,
+    setPastedImageMap,
+  } = inputState;
 
   const [forceTabTrigger, setForceTabTrigger] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,8 +60,8 @@ export function useInputHandlers({
   });
 
   const slashCommands = useSlashCommands({ value, fetchCommands });
-  const pasteManager = usePasteManager();
-  const imageManager = useImagePasteManager();
+  const pasteManager = usePasteManager(pastedTextMap, setPastedTextMap);
+  const imageManager = useImagePasteManager(pastedImageMap, setPastedImageMap);
 
   const hasSuggestions =
     fileSuggestion.matchedPaths.length > 0 ||
@@ -207,14 +212,6 @@ export function useInputHandlers({
     inputState,
   ]);
 
-  const handleQueuedMessagesUp = useCallback(() => {
-    if (queuedMessages.length === 0) return;
-    const queuedText = queuedMessages.join('\n');
-    clearQueue();
-    inputState.setValue(queuedText);
-    inputState.setCursorPosition(0);
-  }, [queuedMessages, clearQueue, inputState]);
-
   const isAtFirstLine = useCallback(() => {
     const beforeCursor = value.substring(0, cursorPosition);
     return !beforeCursor.includes('\n');
@@ -271,7 +268,6 @@ export function useInputHandlers({
       if (e.key === 'ArrowUp') {
         if (e.altKey || e.metaKey) {
           e.preventDefault();
-          handleQueuedMessagesUp();
           return;
         }
         if (hasSuggestions || isAtFirstLine()) {
@@ -441,7 +437,6 @@ export function useInputHandlers({
       handleSubmit,
       handleHistoryUp,
       handleHistoryDown,
-      handleQueuedMessagesUp,
       handleDoubleEscape,
       applyFileSuggestion,
       togglePlanMode,

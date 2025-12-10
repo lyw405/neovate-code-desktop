@@ -1,5 +1,4 @@
 import { useCallback, useRef } from 'react';
-import { useInputStore } from '../store/inputStore';
 
 export interface ImagePasteResult {
   success: boolean;
@@ -29,8 +28,10 @@ function truncateFilename(filename: string, maxLength = 20): string {
   return `${name.substring(0, prefixLen)}...${name.slice(-suffixLen)}.${ext}`;
 }
 
-export function useImagePasteManager() {
-  const { pastedImageMap, setPastedImageMap } = useInputStore();
+export function useImagePasteManager(
+  pastedImageMap: Record<string, string>,
+  setPastedImageMap: (map: Record<string, string>) => void,
+) {
   const counterRef = useRef(0);
 
   const generateImageId = useCallback(() => `#${++counterRef.current}`, []);

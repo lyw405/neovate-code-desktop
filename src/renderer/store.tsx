@@ -20,6 +20,40 @@ type WorkspaceId = string;
 type SessionId = string;
 type RepoId = string;
 
+// Input mode types
+export type InputMode = 'prompt' | 'bash' | 'memory';
+export type PlanMode = 'normal' | 'plan' | 'brainstorm';
+export type ThinkingLevel = null | 'low' | 'medium' | 'high';
+
+// Session-scoped input state
+export interface SessionInputState {
+  value: string;
+  cursorPosition: number;
+  historyIndex: number | null;
+  draftInput: string;
+  planMode: PlanMode;
+  thinking: ThinkingLevel;
+  pastedTextMap: Record<string, string>;
+  pastedImageMap: Record<string, string>;
+}
+
+const defaultSessionInputState: SessionInputState = {
+  value: '',
+  cursorPosition: 0,
+  historyIndex: null,
+  draftInput: '',
+  planMode: 'normal',
+  thinking: null,
+  pastedTextMap: {},
+  pastedImageMap: {},
+};
+
+export function getInputMode(value: string): InputMode {
+  if (value.startsWith('!')) return 'bash';
+  if (value.startsWith('#')) return 'memory';
+  return 'prompt';
+}
+
 // Session-scoped processing state
 interface SessionProcessingState {
   status: 'idle' | 'processing' | 'failed';
@@ -56,6 +90,12 @@ interface StoreState {
 
   // Session-scoped processing state
   sessionProcessing: Record<SessionId, SessionProcessingState>;
+
+  // Session-scoped input state
+  inputBySession: Record<SessionId, SessionInputState>;
+
+  // Workspace-scoped history
+  historyByWorkspace: Record<WorkspaceId, string[]>;
 
   // UI state
   selectedRepoPath: string | null;
@@ -94,6 +134,18 @@ interface StoreActions {
     sessionId: string,
     state: Partial<SessionProcessingState>,
   ) => void;
+
+  // Session input state helpers
+  getSessionInput: (sessionId: string) => SessionInputState;
+  setSessionInput: (
+    sessionId: string,
+    state: Partial<SessionInputState>,
+  ) => void;
+  resetSessionInput: (sessionId: string) => void;
+
+  // Workspace history helpers
+  addToWorkspaceHistory: (workspaceId: string, input: string) => void;
+  getWorkspaceHistory: (workspaceId: string) => string[];
 
   // Entity CRUD operations
   // Repos
@@ -157,6 +209,12 @@ const useStore = create<Store>()((set, get) => ({
 
   // Initial session processing state
   sessionProcessing: {},
+
+  // Initial session input state
+  inputBySession: {},
+
+  // Initial workspace history
+  historyByWorkspace: {},
 
   // Initial UI state
   selectedRepoPath: null,
@@ -330,6 +388,46 @@ const useStore = create<Store>()((set, get) => ({
         },
       },
     }));
+  },
+
+  getSessionInput: (sessionId: string): SessionInputState => {
+    const { inputBySession } = get();
+    return inputBySession[sessionId] || defaultSessionInputState;
+  },
+
+  setSessionInput: (sessionId: string, state: Partial<SessionInputState>) => {
+    set((prev) => ({
+      inputBySession: {
+        ...prev.inputBySession,
+        [sessionId]: {
+          ...(prev.inputBySession[sessionId] || defaultSessionInputState),
+          ...state,
+        },
+      },
+    }));
+  },
+
+  resetSessionInput: (sessionId: string) => {
+    set((prev) => ({
+      inputBySession: {
+        ...prev.inputBySession,
+        [sessionId]: defaultSessionInputState,
+      },
+    }));
+  },
+
+  addToWorkspaceHistory: (workspaceId: string, input: string) => {
+    set((prev) => ({
+      historyByWorkspace: {
+        ...prev.historyByWorkspace,
+        [workspaceId]: [...(prev.historyByWorkspace[workspaceId] || []), input],
+      },
+    }));
+  },
+
+  getWorkspaceHistory: (workspaceId: string): string[] => {
+    const { historyByWorkspace } = get();
+    return historyByWorkspace[workspaceId] || [];
   },
 
   sendMessage: async (params: { message: string }) => {
@@ -947,5 +1045,5 @@ const useStore = create<Store>()((set, get) => ({
   },
 }));
 
-export { useStore };
+export { useStore, defaultSessionInputState };
 export type { Store, StoreState, StoreActions, SessionProcessingState };
