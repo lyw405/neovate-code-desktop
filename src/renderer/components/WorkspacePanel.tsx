@@ -89,6 +89,14 @@ export const WorkspacePanel = ({
   const getSessionInput = useStore((state) => state.getSessionInput);
   const setSessionInput = useStore((state) => state.setSessionInput);
   const storeSendMessage = useStore((state) => state.sendMessage);
+  const slashCommandJSXBySession = useStore(
+    (state) => state.slashCommandJSXBySession,
+  );
+
+  // Get slash command JSX for current session
+  const slashCommandJSX = selectedSessionId
+    ? slashCommandJSXBySession[selectedSessionId]
+    : null;
 
   // Get sessions and messages for the current workspace from store - memoized to avoid infinite loop
   const allSessions = useMemo(
@@ -366,6 +374,7 @@ export const WorkspacePanel = ({
             cwd={workspace.repoPath}
             request={request}
           />
+          {slashCommandJSX}
         </div>
       </div>
     </WorkspaceContext.Provider>

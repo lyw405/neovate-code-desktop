@@ -1,3 +1,4 @@
+import React from 'react';
 import { create } from 'zustand';
 import { MessageBus } from './client/messaging/MessageBus';
 import { WebSocketTransport } from './client/transport/WebSocketTransport';
@@ -19,6 +20,7 @@ import {
   type CommandEntry,
 } from './slashCommand';
 import { randomUUID } from './utils/uuid';
+import { localJSXCommands } from './slash-commands';
 
 type WorkspaceId = string;
 type SessionId = string;
@@ -150,6 +152,9 @@ interface StoreState {
 
   // Clone state
   cloneState: CloneState;
+
+  // Local JSX slash command state
+  slashCommandJSXBySession: Record<SessionId, React.ReactNode | null>;
 }
 
 interface StoreActions {
@@ -240,6 +245,9 @@ interface StoreActions {
   updateCloneProgress: (progress: number) => void;
   cancelClone: () => Promise<void>;
   resetCloneState: () => void;
+
+  // Local JSX slash command actions
+  setSlashCommandJSX: (sessionId: string, jsx: React.ReactNode | null) => void;
 }
 
 type Store = StoreState & StoreActions;
@@ -286,6 +294,9 @@ const useStore = create<Store>()((set, get) => ({
 
   // Initial clone state
   cloneState: defaultCloneState,
+
+  // Initial local JSX slash command state
+  slashCommandJSXBySession: {},
 
   connect: async () => {
     const { transport } = get();
@@ -556,6 +567,8 @@ const useStore = create<Store>()((set, get) => ({
 
     if (message && isSlashCommand(message)) {
       const parsed = parseSlashCommand(message);
+
+      // Check backend commands
       const result = await request('slashCommand.get', {
         cwd,
         command: parsed.command,
@@ -573,7 +586,6 @@ const useStore = create<Store>()((set, get) => ({
         const isPrompt = type === 'prompt';
         if (isPrompt) {
           // TODO: fork parentUuid
-          alert('session.addMessages');
           await request('session.addMessages', {
             cwd,
             sessionId,
@@ -616,7 +628,40 @@ const useStore = create<Store>()((set, get) => ({
             return;
           }
         } else if (isLocalJSX) {
-          alert(`${command} Local JSX commands are not supported`);
+          // Check for local-jsx commands first (client-side)
+          const localCommand = localJSXCommands.find(
+            (c: { name: string }) => c.name === parsed.command,
+          );
+          if (localCommand) {
+            const jsx = await localCommand.call(
+              async (result: string | null) => {
+                set((state) => ({
+                  slashCommandJSXBySession: {
+                    ...state.slashCommandJSXBySession,
+                    [sessionId]: null,
+                  },
+                }));
+                if (result) {
+                  const { addMessage } = get();
+                  addMessage(sessionId, {
+                    role: 'user',
+                    content: [{ type: 'text', text: result }],
+                  } as any);
+                }
+              },
+              {} as any,
+              parsed.args,
+            );
+            set((state) => ({
+              slashCommandJSXBySession: {
+                ...state.slashCommandJSXBySession,
+                [sessionId]: jsx,
+              },
+            }));
+            return;
+          } else {
+            alert(`${command} Local JSX commands are not supported`);
+          }
           return;
         } else {
           alert(`${command} Unknown slash command type: ${type}`);
@@ -1268,6 +1313,15 @@ const useStore = create<Store>()((set, get) => ({
 
   resetCloneState: () => {
     set({ cloneState: defaultCloneState });
+  },
+
+  setSlashCommandJSX: (sessionId: string, jsx: React.ReactNode | null) => {
+    set((state) => ({
+      slashCommandJSXBySession: {
+        ...state.slashCommandJSXBySession,
+        [sessionId]: jsx,
+      },
+    }));
   },
 }));
 
