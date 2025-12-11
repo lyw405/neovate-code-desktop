@@ -95,6 +95,7 @@ export function useInputState(
   // Plan mode and thinking
   const planMode = sessionInput.planMode;
   const thinking = sessionInput.thinking;
+  const thinkingEnabled = sessionInput.thinkingEnabled;
 
   const togglePlanMode = useCallback(() => {
     if (sessionId) {
@@ -109,7 +110,7 @@ export function useInputState(
   }, [sessionId, planMode, setSessionInput]);
 
   const toggleThinking = useCallback(() => {
-    if (sessionId) {
+    if (sessionId && thinkingEnabled) {
       const newThinking: ThinkingLevel =
         thinking === null
           ? 'low'
@@ -120,7 +121,25 @@ export function useInputState(
               : null;
       setSessionInput(sessionId, { thinking: newThinking });
     }
-  }, [sessionId, thinking, setSessionInput]);
+  }, [sessionId, thinking, thinkingEnabled, setSessionInput]);
+
+  const setThinkingEnabled = useCallback(
+    (enabled: boolean) => {
+      if (sessionId) {
+        setSessionInput(sessionId, { thinkingEnabled: enabled });
+      }
+    },
+    [sessionId, setSessionInput],
+  );
+
+  const setThinking = useCallback(
+    (level: ThinkingLevel) => {
+      if (sessionId) {
+        setSessionInput(sessionId, { thinking: level });
+      }
+    },
+    [sessionId, setSessionInput],
+  );
 
   // Pasted text and image maps
   const pastedTextMap = sessionInput.pastedTextMap;
@@ -159,8 +178,11 @@ export function useInputState(
     // Plan mode and thinking
     planMode,
     thinking,
+    thinkingEnabled,
     togglePlanMode,
     toggleThinking,
+    setThinkingEnabled,
+    setThinking,
     // Pasted maps
     pastedTextMap,
     pastedImageMap,

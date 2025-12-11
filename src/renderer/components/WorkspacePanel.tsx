@@ -87,6 +87,7 @@ export const WorkspacePanel = ({
   );
   const cancelSession = useStore((state) => state.cancelSession);
   const getSessionInput = useStore((state) => state.getSessionInput);
+  const setSessionInput = useStore((state) => state.setSessionInput);
   const storeSendMessage = useStore((state) => state.sendMessage);
 
   // Get sessions and messages for the current workspace from store - memoized to avoid infinite loop
@@ -180,6 +181,64 @@ export const WorkspacePanel = ({
     workspaces,
     request,
     setMessages,
+  ]);
+
+  // Fetch model info once per session to initialize thinking state
+  useEffect(() => {
+    if (!selectedSessionId || !selectedWorkspaceId) return;
+
+    const workspace = workspaces[selectedWorkspaceId];
+    if (!workspace) return;
+
+    // Check if already initialized for this session
+    const sessionInput = getSessionInput(selectedSessionId);
+    if (sessionInput.thinkingInitialized) return;
+
+    const fetchModelInfo = async () => {
+      try {
+        const response = await request('session.getModel', {
+          cwd: workspace.worktreePath,
+          sessionId: selectedSessionId,
+          includeModelInfo: true,
+        });
+        if (
+          response.success &&
+          'modelInfo' in response.data &&
+          response.data.modelInfo
+        ) {
+          const hasThinkingConfig = !!response.data.modelInfo.thinkingConfig;
+          setSessionInput(selectedSessionId, {
+            thinkingEnabled: hasThinkingConfig,
+            thinking: hasThinkingConfig ? 'low' : null,
+            thinkingInitialized: true,
+          });
+        } else {
+          // Model doesn't support thinking
+          setSessionInput(selectedSessionId, {
+            thinkingEnabled: false,
+            thinking: null,
+            thinkingInitialized: true,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch model info:', error);
+        // Default to disabled on error
+        setSessionInput(selectedSessionId, {
+          thinkingEnabled: false,
+          thinking: null,
+          thinkingInitialized: true,
+        });
+      }
+    };
+
+    fetchModelInfo();
+  }, [
+    selectedSessionId,
+    selectedWorkspaceId,
+    workspaces,
+    request,
+    getSessionInput,
+    setSessionInput,
   ]);
 
   const sendMessage = async (content: string) => {

@@ -19,6 +19,14 @@ type Message = any;
 type NormalizedMessage = any;
 type ApprovalCategory = any;
 type ToolUse = any;
+type Provider = Record<string, any>;
+type ModelInfo = {
+  provider: Provider;
+  model: any;
+  thinkingConfig?: Record<string, any>;
+  _mCreator: () => Promise<any>;
+};
+type ProvidersMap = Record<string, Provider>;
 
 // ============================================================================
 // Common Response Types
@@ -419,13 +427,27 @@ type SessionMessagesListOutput = {
 type SessionGetModelInput = {
   cwd: string;
   sessionId: string;
+  includeModelInfo?: boolean;
 };
-type SessionGetModelOutput = {
-  success: boolean;
-  data: {
-    model: string | null;
-  };
-};
+type SessionGetModelOutput =
+  | {
+      success: true;
+      data: {
+        model: string | null;
+      };
+    }
+  | {
+      success: true;
+      data: {
+        model: string | null;
+        modelInfo: ModelInfo | null;
+        providers: ProvidersMap;
+      };
+    }
+  | {
+      success: false;
+      error: any;
+    };
 
 type SessionSendInput = {
   message: string | null;

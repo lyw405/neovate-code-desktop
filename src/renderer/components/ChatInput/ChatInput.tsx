@@ -108,17 +108,25 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [],
     );
 
-    const { inputState, mode, handlers, suggestions, imageManager } =
-      useInputHandlers({
-        sessionId,
-        workspaceId,
-        onSubmit,
-        onCancel,
-        onShowForkModal,
-        fetchPaths,
-        fetchCommands,
-        isProcessing,
-      });
+    const {
+      inputState,
+      mode,
+      handlers,
+      suggestions,
+      imageManager,
+      thinkingEnabled,
+      setThinkingEnabled,
+      setThinking,
+    } = useInputHandlers({
+      sessionId,
+      workspaceId,
+      onSubmit,
+      onCancel,
+      onShowForkModal,
+      fetchPaths,
+      fetchCommands,
+      isProcessing,
+    });
 
     const { planMode, thinking, togglePlanMode, toggleThinking } = inputState;
 
@@ -281,11 +289,42 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             key: 'model',
             value: fullModelValue,
           });
+
+          // Fetch model info to update thinking state
+          const modelInfoResponse = await request('session.getModel', {
+            cwd,
+            sessionId,
+            includeModelInfo: true,
+          });
+
+          if (
+            modelInfoResponse.success &&
+            'modelInfo' in modelInfoResponse.data &&
+            modelInfoResponse.data.modelInfo
+          ) {
+            const hasThinkingConfig =
+              !!modelInfoResponse.data.modelInfo.thinkingConfig;
+            setThinkingEnabled(hasThinkingConfig);
+            setThinking(hasThinkingConfig ? 'low' : null);
+          } else {
+            setThinkingEnabled(false);
+            setThinking(null);
+          }
         } catch {
-          // Ignore errors
+          // On error, disable thinking
+          setThinkingEnabled(false);
+          setThinking(null);
         }
       },
-      [request, cwd, sessionId, providerValue, currentProvider],
+      [
+        request,
+        cwd,
+        sessionId,
+        providerValue,
+        currentProvider,
+        setThinkingEnabled,
+        setThinking,
+      ],
     );
 
     const { value } = inputState.state;
@@ -561,8 +600,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 </TooltipPopup>
               </Tooltip>
 
-              {/* Thinking Toggle - only show when enabled */}
-              {thinking && (
+              {/* Thinking Toggle - only show when model supports thinking */}
+              {thinkingEnabled && (
                 <Tooltip>
                   <TooltipTrigger
                     render={
@@ -576,18 +615,24 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                           color:
                             thinking === 'high'
                               ? '#d4a520'
-                              : 'var(--brand-primary, #3b82f6)',
+                              : thinking
+                                ? 'var(--brand-primary, #3b82f6)'
+                                : 'var(--text-secondary)',
                         }}
                       >
                         <HugeiconsIcon icon={BrainIcon} size={14} />
                         <span className="font-medium capitalize">
-                          {thinking === 'medium' ? 'Med' : thinking}
+                          {thinking === null
+                            ? 'Off'
+                            : thinking === 'medium'
+                              ? 'Med'
+                              : thinking}
                         </span>
                       </button>
                     }
                   />
                   <TooltipPopup>
-                    Extended thinking: {thinking} (Ctrl+T to cycle)
+                    Extended thinking: {thinking || 'off'} (Ctrl+T to cycle)
                   </TooltipPopup>
                 </Tooltip>
               )}
