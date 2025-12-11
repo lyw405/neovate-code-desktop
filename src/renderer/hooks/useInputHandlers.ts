@@ -38,11 +38,14 @@ export function useInputHandlers({
     history,
     draftInput,
     planMode,
+    thinkingEnabled,
     setHistoryIndex,
     setDraftInput,
     addToHistory,
     togglePlanMode,
     toggleThinking,
+    setThinkingEnabled,
+    setThinking,
     pastedTextMap,
     pastedImageMap,
     setPastedTextMap,
@@ -539,5 +542,9 @@ export function useInputHandlers({
           : fileSuggestion.selectedIndex,
     },
     imageManager,
+    // Thinking state setters for external updates (e.g., model change)
+    thinkingEnabled,
+    setThinkingEnabled,
+    setThinking,
   };
 }

@@ -33,6 +33,7 @@ export interface SessionInputState {
   draftInput: string;
   planMode: PlanMode;
   thinking: ThinkingLevel;
+  thinkingEnabled: boolean;
   pastedTextMap: Record<string, string>;
   pastedImageMap: Record<string, string>;
 }
@@ -44,6 +45,7 @@ const defaultSessionInputState: SessionInputState = {
   draftInput: '',
   planMode: 'normal',
   thinking: null,
+  thinkingEnabled: false,
   pastedTextMap: {},
   pastedImageMap: {},
 };
@@ -418,8 +420,10 @@ const useStore = create<Store>()((set, get) => ({
         ...prev.inputBySession,
         [sessionId]: {
           ...defaultSessionInputState,
-          // but keep thinking
+          // but keep thinking and thinkingEnabled
           thinking: prev.inputBySession[sessionId]?.thinking || null,
+          thinkingEnabled:
+            prev.inputBySession[sessionId]?.thinkingEnabled || false,
         },
       },
     }));
