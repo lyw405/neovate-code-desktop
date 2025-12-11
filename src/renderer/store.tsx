@@ -426,6 +426,7 @@ const useStore = create<Store>()((set, get) => ({
           thinking: prev.inputBySession[sessionId]?.thinking || null,
           thinkingEnabled:
             prev.inputBySession[sessionId]?.thinkingEnabled || false,
+          planMode: prev.inputBySession[sessionId]?.planMode || 'normal',
         },
       },
     }));
@@ -460,6 +461,7 @@ const useStore = create<Store>()((set, get) => ({
       sessions,
       updateSession,
       setSessionProcessing,
+      setSessionInput,
     } = get();
 
     let sessionId = selectedSessionId;
@@ -478,6 +480,15 @@ const useStore = create<Store>()((set, get) => ({
     }
 
     const cwd = workspace.worktreePath;
+    let message = params.message;
+
+    const isBrainstormMode = params.planMode === 'brainstorm';
+    if (isBrainstormMode) {
+      message = `/spec:brainstorm ${message}`;
+      setSessionInput(sessionId, {
+        planMode: 'normal',
+      });
+    }
 
     // Set session-scoped processing state
     setSessionProcessing(sessionId, {
@@ -494,7 +505,7 @@ const useStore = create<Store>()((set, get) => ({
       const thinking = params.think ? { effect: params.think } : undefined;
 
       const response = await request('session.send', {
-        message: params.message,
+        message,
         sessionId,
         cwd,
         planMode: planModeBoolean,
@@ -523,9 +534,9 @@ const useStore = create<Store>()((set, get) => ({
         }
 
         // Only summarize if there's a message to summarize
-        if (params.message) {
+        if (message) {
           const summary = await request('utils.summarizeMessage', {
-            message: params.message,
+            message,
             cwd,
           });
           if (summary.success && summary.data.text) {
