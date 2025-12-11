@@ -131,6 +131,14 @@ export function useInputHandlers({
       return;
     }
 
+    // In memory mode or bash mode, show alert instead of submitting
+    if (mode === 'memory' || mode === 'bash') {
+      alert(
+        `${mode.charAt(0).toUpperCase() + mode.slice(1)} mode is not implemented yet`,
+      );
+      return;
+    }
+
     const { expandedMessage, images } = imageManager.expandImageReferences(
       pasteManager.expandPastedText(trimmed),
     );
@@ -150,6 +158,7 @@ export function useInputHandlers({
     imageManager,
     planMode,
     isProcessing,
+    mode,
   ]);
 
   const handleHistoryUp = useCallback(() => {
