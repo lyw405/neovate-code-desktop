@@ -45,15 +45,19 @@ export const CloneInput = ({
     }
   }, [open]);
 
-  // Clean up event listener only when component truly unmounts (not when dialog closes)
-  // Note: With store.onEvent, we can't manually remove handlers
-  // But taskId filtering ensures old handlers don't interfere
+  // Clean up on unmount - cancel ongoing operation if any
   useEffect(() => {
     return () => {
-      console.log(
-        '[Clone] Component unmounting, handlers will be cleaned up automatically',
-      );
+      // Only cancel if there's an active clone operation
+      const taskId = currentTaskIdRef.current;
+      if (taskId && isCloning) {
+        // Cancel the clone operation on unmount
+        request('git.clone.cancel', { taskId }).catch((error) =>
+          console.error('[Clone] Failed to cancel on unmount:', error),
+        );
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle ESC key to close
@@ -72,7 +76,6 @@ export const CloneInput = ({
     e.preventDefault();
 
     const url = gitUrl.trim();
-    console.log('[Clone] Start clone:', url);
     if (!url || isCloning) return;
 
     // Validate Git URL format
@@ -110,7 +113,6 @@ export const CloneInput = ({
     // Generate unique task ID for this clone operation
     const taskId = `clone-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     currentTaskIdRef.current = taskId;
-    console.log('[Clone] Generated taskId:', taskId);
 
     // CRITICAL: Define progress handler outside try block
     // This ensures proper cleanup in finally block
@@ -119,51 +121,34 @@ export const CloneInput = ({
       percent: number;
       message: string;
     }) => {
-      console.log('[Clone] Progress event received:', data);
       if (data.taskId === taskId) {
         const percent = Math.round(data.percent || 0);
-        console.log('[Clone] Progress update for current task:', percent, '%');
         onCloneStart?.(percent, taskId);
-      } else {
-        console.log(
-          '[Clone] Ignored progress for different task:',
-          data.taskId,
-        );
       }
     };
 
     // CRITICAL: Subscribe to progress events using store.onEvent
     // This ensures we subscribe to the correct MessageBus instance
-    // Remove old handler if exists
-    if (progressHandlerRef.current) {
-      console.log('[Clone] Removing old progress handler');
-      // Note: We can't remove handlers with the current implementation
-      // So we rely on taskId filtering to ignore old events
-    }
-
     // CRITICAL: Subscribe to progress events BEFORE starting clone
     // This ensures we don't miss early progress events
-    console.log('[Clone] Subscribing to progress events via store.onEvent');
+    let unsubscribe: (() => void) | undefined;
     try {
-      subscribeToEvent<{
+      unsubscribe = subscribeToEvent<{
         taskId: string;
         percent: number;
         message: string;
       }>('git.clone.progress', handleProgress);
 
-      // Store handler in ref (though we can't manually remove it)
+      // Store handler in ref for cleanup
       progressHandlerRef.current = handleProgress;
-      console.log('[Clone] Successfully subscribed to progress events');
     } catch (error) {
       console.error('[Clone] Failed to subscribe to progress events:', error);
     }
 
     try {
       // Start showing progress immediately
-      console.log('[Clone] Starting clone process');
       setIsCloning(true);
       onCloneStart?.(0, taskId);
-      console.log('[Clone] Initial progress set to 0%');
 
       // Close the input dialog to keep UI clean
       onOpenChange(false);
@@ -177,28 +162,48 @@ export const CloneInput = ({
 
       // Set a reasonable timeout (35 minutes, slightly longer than backend's 30min)
       // This ensures the backend timeout triggers first with proper error handling
+      let timeoutId: NodeJS.Timeout | null = null;
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(
+        timeoutId = setTimeout(
           () => {
+            // Cancel backend operation on timeout
+            request('git.clone.cancel', { taskId }).catch((error) =>
+              console.error('[Clone] Failed to cancel on timeout:', error),
+            );
             reject(new Error('Clone operation timed out after 35 minutes'));
           },
           35 * 60 * 1000,
         );
       });
 
-      const cloneResponse = await Promise.race([clonePromise, timeoutPromise]);
-      console.log('[Clone] Clone response received:', cloneResponse.success);
-      console.log('[Clone] Clone response error:', cloneResponse.error);
-      console.log(
-        '[Clone] Clone response full:',
-        JSON.stringify(cloneResponse),
-      );
+      let cloneResponse;
+      try {
+        cloneResponse = await Promise.race([clonePromise, timeoutPromise]);
+
+        // Clear timeout on success or expected error
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+      } catch (cloneError) {
+        // Clear timeout on unexpected error
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        throw cloneError;
+      }
 
       if (!cloneResponse.success || !cloneResponse.data) {
         // Check if the error is from user cancellation
         const errorMsg = cloneResponse.error || '';
         if (errorMsg.includes('cancelled by user')) {
-          console.log('[Clone] Operation cancelled, skipping error toast');
+          // Show cancellation toast
+          toastManager.add({
+            title: 'Clone cancelled',
+            description: 'Repository clone operation has been cancelled',
+            type: 'info',
+          });
           return;
         }
 
@@ -248,7 +253,6 @@ export const CloneInput = ({
       }
 
       // Show success toast
-      console.log('[Clone] Clone completed successfully');
       toastManager.add({
         title: 'Repository cloned',
         description: `Successfully cloned ${repoData.name}`,
@@ -262,7 +266,12 @@ export const CloneInput = ({
 
       // Skip error toast if user cancelled
       if (errorMessage.includes('cancelled by user')) {
-        console.log('[Clone] Operation cancelled, skipping error toast');
+        // Show cancellation toast
+        toastManager.add({
+          title: 'Clone cancelled',
+          description: 'Repository clone operation has been cancelled',
+          type: 'info',
+        });
         return;
       }
 
@@ -305,14 +314,13 @@ export const CloneInput = ({
         type: 'error',
       });
     } finally {
-      // Note: Event handlers use taskId filtering, so old handlers won't interfere
-      // with new clone operations. No manual cleanup needed.
-      console.log(
-        '[Clone] Cleaning up - taskId filter will ignore future events',
-      );
+      // Clean up event listener
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      progressHandlerRef.current = null;
 
       // Reset cloning state and notify completion
-      console.log('[Clone] Resetting cloning state');
       setIsCloning(false);
       currentTaskIdRef.current = null;
       onCloneComplete?.();

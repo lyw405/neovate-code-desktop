@@ -1,20 +1,19 @@
 import { create } from 'zustand';
-import { WebSocketTransport } from './client/transport/WebSocketTransport';
 import { MessageBus } from './client/messaging/MessageBus';
-import { randomUUID } from './utils/uuid';
-import { getNestedValue, setNestedValue } from './lib/utils';
+import { WebSocketTransport } from './client/transport/WebSocketTransport';
 import type {
   RepoData,
-  WorkspaceData,
   SessionData,
+  WorkspaceData,
 } from './client/types/entities';
 import type { NormalizedMessage } from './client/types/message';
+import { getNestedValue, setNestedValue } from './lib/utils';
 import type {
-  HandlerMap,
-  HandlerMethod,
   HandlerInput,
+  HandlerMethod,
   HandlerOutput,
 } from './nodeBridge.types';
+import { randomUUID } from './utils/uuid';
 
 type WorkspaceId = string;
 type SessionId = string;
@@ -124,7 +123,7 @@ interface StoreActions {
     method: K,
     params: HandlerInput<K>,
   ) => Promise<HandlerOutput<K>>;
-  onEvent: <T>(event: string, handler: (data: T) => void) => void;
+  onEvent: <T>(event: string, handler: (data: T) => void) => () => void;
   initialize: () => Promise<void>;
   sendMessage: (params: {
     message: string | null;
@@ -274,7 +273,7 @@ const useStore = create<Store>()((set, get) => ({
 
       // Set state to connected after successful connection
       set({ state: 'connected' });
-    } catch (error) {
+    } catch (_error) {
       set({ state: 'error' });
     }
   },
@@ -327,7 +326,7 @@ const useStore = create<Store>()((set, get) => ({
       );
     }
 
-    messageBus.onEvent<T>(event, handler);
+    return messageBus.onEvent<T>(event, handler);
   },
 
   initialize: async () => {
@@ -507,7 +506,7 @@ const useStore = create<Store>()((set, get) => ({
         });
 
         const workspaceSessions = sessions[selectedWorkspaceId];
-        const session = workspaceSessions.find(
+        const _session = workspaceSessions.find(
           (s) => s.sessionId === sessionId,
         );
         const sessionMessages = get().messages[sessionId] || [];

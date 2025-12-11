@@ -19,11 +19,6 @@ export const CloneProgressToast = ({
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    console.log('[CloneProgressToast] Props updated:', {
-      visible,
-      progress,
-      taskId,
-    });
     if (visible) {
       setShow(true);
     } else {
@@ -31,7 +26,7 @@ export const CloneProgressToast = ({
       const timer = setTimeout(() => setShow(false), 300);
       return () => clearTimeout(timer);
     }
-  }, [visible, progress, taskId]);
+  }, [visible]);
 
   if (!show) return null;
 

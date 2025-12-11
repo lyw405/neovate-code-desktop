@@ -167,19 +167,11 @@ export const AddRepoMenu = ({ children }: AddRepoMenuProps) => {
     try {
       await request('git.clone.cancel', { taskId: currentTaskId });
 
-      // Show cancel toast - this will be the only toast shown
-      toastManager.add({
-        title: 'Clone cancelled',
-        description: 'Repository clone operation has been cancelled',
-        type: 'info',
-      });
-
-      // Reset state immediately
-      setIsCloning(false);
-      setCloneProgress(0);
-      setCurrentTaskId(null);
+      // Note: Don't reset state here - let CloneInput's finally block handle it
+      // This avoids double state reset and ensures proper cleanup order
     } catch (error) {
       console.error('Failed to cancel clone:', error);
+      // Even if cancel fails, the CloneInput will handle state cleanup
     }
   };
 
