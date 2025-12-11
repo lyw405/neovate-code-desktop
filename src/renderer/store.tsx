@@ -83,6 +83,31 @@ const defaultSessionProcessingState: SessionProcessingState = {
   retryInfo: null,
 };
 
+// Clone operation state
+export interface CloneState {
+  taskId: string | null;
+  url: string | null;
+  destination: string | null;
+  status: 'idle' | 'cloning' | 'success' | 'failed' | 'cancelled';
+  progress: number;
+  error: string | null;
+  errorCode: string | null;
+  clonePath: string | null;
+  startTime: number | null;
+}
+
+const defaultCloneState: CloneState = {
+  taskId: null,
+  url: null,
+  destination: null,
+  status: 'idle',
+  progress: 0,
+  error: null,
+  errorCode: null,
+  clonePath: null,
+  startTime: null,
+};
+
 interface StoreState {
   // WebSocket connection state
   state: 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -122,6 +147,9 @@ interface StoreState {
   // File and command caches
   filesByWorkspace: Record<WorkspaceId, string[]>;
   slashCommandsByWorkspace: Record<WorkspaceId, any[]>;
+
+  // Clone state
+  cloneState: CloneState;
 }
 
 interface StoreActions {
@@ -206,6 +234,12 @@ interface StoreActions {
   // Session control actions
   cancelSession: (sessionId: string) => Promise<void>;
   clearSession: (sessionId: string) => void;
+
+  // Clone actions (simplified - most logic moved to useClone hook)
+  updateCloneState: (updates: Partial<CloneState>) => void;
+  updateCloneProgress: (progress: number) => void;
+  cancelClone: () => Promise<void>;
+  resetCloneState: () => void;
 }
 
 type Store = StoreState & StoreActions;
@@ -249,6 +283,9 @@ const useStore = create<Store>()((set, get) => ({
   // Initial file and command cache state
   filesByWorkspace: {},
   slashCommandsByWorkspace: {},
+
+  // Initial clone state
+  cloneState: defaultCloneState,
 
   connect: async () => {
     const { transport } = get();
@@ -342,7 +379,14 @@ const useStore = create<Store>()((set, get) => ({
   },
 
   initialize: async () => {
-    const { loadGlobalConfig, initialized, onEvent, addMessage } = get();
+    const {
+      loadGlobalConfig,
+      initialized,
+      onEvent,
+      addMessage,
+      updateCloneProgress,
+      cloneState,
+    } = get();
 
     // Only initialize once
     if (initialized) {
@@ -380,6 +424,18 @@ const useStore = create<Store>()((set, get) => ({
         });
       }
     });
+
+    // Subscribe to clone progress events
+    onEvent<{ taskId: string; percent: number; message: string }>(
+      'git.clone.progress',
+      (data) => {
+        const currentCloneState = get().cloneState;
+        // Only update if this is the current clone task
+        if (data.taskId === currentCloneState.taskId) {
+          updateCloneProgress(data.percent);
+        }
+      },
+    );
 
     set({ initialized: true });
   },
@@ -1166,6 +1222,52 @@ const useStore = create<Store>()((set, get) => ({
         [sessionId]: defaultSessionProcessingState,
       },
     }));
+  },
+
+  // Clone actions (simplified - most logic moved to useClone hook)
+  updateCloneState: (updates: Partial<CloneState>) => {
+    set((state) => ({
+      cloneState: {
+        ...state.cloneState,
+        ...updates,
+      },
+    }));
+  },
+
+  updateCloneProgress: (progress: number) => {
+    set((state) => ({
+      cloneState: {
+        ...state.cloneState,
+        progress: Math.round(progress),
+      },
+    }));
+  },
+
+  cancelClone: async () => {
+    const { cloneState, request } = get();
+
+    if (!cloneState.taskId || cloneState.status !== 'cloning') {
+      return;
+    }
+
+    try {
+      await request('git.clone.cancel', { taskId: cloneState.taskId });
+
+      set((state) => ({
+        cloneState: {
+          ...state.cloneState,
+          status: 'cancelled',
+          error: 'Clone operation cancelled by user',
+          errorCode: 'CANCELLED',
+        },
+      }));
+    } catch (error) {
+      console.error('Failed to cancel clone:', error);
+    }
+  },
+
+  resetCloneState: () => {
+    set({ cloneState: defaultCloneState });
   },
 }));
 

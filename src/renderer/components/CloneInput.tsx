@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ElectronAPI } from '../../shared/types';
-import { useStore } from '../store';
-import { toastManager } from './ui';
+import { useClone } from '../hooks/useClone';
 import { Input } from './ui/input';
 
 interface CloneInputProps {
@@ -18,19 +16,13 @@ export const CloneInput = ({
   onCloneComplete,
 }: CloneInputProps) => {
   const [gitUrl, setGitUrl] = useState('');
-  const [isCloning, setIsCloning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const progressHandlerRef = useRef<
-    | ((data: { taskId: string; percent: number; message: string }) => void)
-    | null
-  >(null);
-  const currentTaskIdRef = useRef<string | null>(null);
-  const {
-    request,
-    addRepo,
-    addWorkspace,
-    onEvent: subscribeToEvent,
-  } = useStore();
+
+  // Use the new useClone hook
+  const { isCloning, cloneUrl } = useClone({
+    onCloneStart,
+    onCloneComplete,
+  });
 
   // Focus input when opened and reset state when closed
   useEffect(() => {
@@ -41,24 +33,8 @@ export const CloneInput = ({
     } else {
       // Reset form state when dialog closes
       setGitUrl('');
-      setIsCloning(false);
     }
   }, [open]);
-
-  // Clean up on unmount - cancel ongoing operation if any
-  useEffect(() => {
-    return () => {
-      // Only cancel if there's an active clone operation
-      const taskId = currentTaskIdRef.current;
-      if (taskId && isCloning) {
-        // Cancel the clone operation on unmount
-        request('git.clone.cancel', { taskId }).catch((error) =>
-          console.error('[Clone] Failed to cancel on unmount:', error),
-        );
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Handle ESC key to close
   useEffect(() => {
@@ -78,253 +54,11 @@ export const CloneInput = ({
     const url = gitUrl.trim();
     if (!url || isCloning) return;
 
-    // Validate Git URL format
-    const isValidGitUrl =
-      url.startsWith('http://') ||
-      url.startsWith('https://') ||
-      url.startsWith('git@') ||
-      url.endsWith('.git');
+    // Close the input dialog to keep UI clean
+    onOpenChange(false);
 
-    if (!isValidGitUrl) {
-      toastManager.add({
-        title: 'Invalid URL',
-        description: 'Please enter a valid Git repository URL',
-        type: 'error',
-      });
-      return;
-    }
-
-    // Prompt for clone location
-    const electron = window.electron as ElectronAPI | undefined;
-    if (!electron?.selectCloneLocation) {
-      toastManager.add({
-        title: 'Error',
-        description: 'Directory selection is not available',
-        type: 'error',
-      });
-      return;
-    }
-
-    const cloneLocation = await electron.selectCloneLocation();
-    if (!cloneLocation) {
-      return;
-    }
-
-    // Generate unique task ID for this clone operation
-    const taskId = `clone-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    currentTaskIdRef.current = taskId;
-
-    // CRITICAL: Define progress handler outside try block
-    // This ensures proper cleanup in finally block
-    const handleProgress = (data: {
-      taskId: string;
-      percent: number;
-      message: string;
-    }) => {
-      if (data.taskId === taskId) {
-        const percent = Math.round(data.percent || 0);
-        onCloneStart?.(percent, taskId);
-      }
-    };
-
-    // CRITICAL: Subscribe to progress events using store.onEvent
-    // This ensures we subscribe to the correct MessageBus instance
-    // CRITICAL: Subscribe to progress events BEFORE starting clone
-    // This ensures we don't miss early progress events
-    let unsubscribe: (() => void) | undefined;
-    try {
-      unsubscribe = subscribeToEvent<{
-        taskId: string;
-        percent: number;
-        message: string;
-      }>('git.clone.progress', handleProgress);
-
-      // Store handler in ref for cleanup
-      progressHandlerRef.current = handleProgress;
-    } catch (error) {
-      console.error('[Clone] Failed to subscribe to progress events:', error);
-    }
-
-    try {
-      // Start showing progress immediately
-      setIsCloning(true);
-      onCloneStart?.(0, taskId);
-
-      // Close the input dialog to keep UI clean
-      onOpenChange(false);
-
-      // Clone the repository with timeout
-      const clonePromise = request('git.clone', {
-        url,
-        destination: cloneLocation,
-        taskId,
-      });
-
-      // Set a reasonable timeout (35 minutes, slightly longer than backend's 30min)
-      // This ensures the backend timeout triggers first with proper error handling
-      let timeoutId: NodeJS.Timeout | null = null;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(
-          () => {
-            // Cancel backend operation on timeout
-            request('git.clone.cancel', { taskId }).catch((error) =>
-              console.error('[Clone] Failed to cancel on timeout:', error),
-            );
-            reject(new Error('Clone operation timed out after 35 minutes'));
-          },
-          35 * 60 * 1000,
-        );
-      });
-
-      let cloneResponse;
-      try {
-        cloneResponse = await Promise.race([clonePromise, timeoutPromise]);
-
-        // Clear timeout on success or expected error
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-      } catch (cloneError) {
-        // Clear timeout on unexpected error
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        throw cloneError;
-      }
-
-      if (!cloneResponse.success || !cloneResponse.data) {
-        // Check if the error is from user cancellation
-        const errorMsg = cloneResponse.error || '';
-        if (errorMsg.includes('cancelled by user')) {
-          // Show cancellation toast
-          toastManager.add({
-            title: 'Clone cancelled',
-            description: 'Repository clone operation has been cancelled',
-            type: 'info',
-          });
-          return;
-        }
-
-        toastManager.add({
-          title: 'Clone Failed',
-          description: cloneResponse.error || 'Failed to clone repository',
-          type: 'error',
-        });
-        return;
-      }
-
-      const clonePath = cloneResponse.data.clonePath;
-
-      // Get repository info
-      const repoInfoResponse = await request('project.getRepoInfo', {
-        cwd: clonePath,
-      });
-
-      if (!repoInfoResponse.success || !repoInfoResponse.data?.repoData) {
-        toastManager.add({
-          title: 'Error',
-          description:
-            repoInfoResponse.error || 'Could not load repository information',
-          type: 'error',
-        });
-        return;
-      }
-
-      const repoData = repoInfoResponse.data.repoData;
-
-      // Add the repository to the store
-      addRepo(repoData);
-
-      // Fetch and add workspaces for this repository
-      try {
-        const workspacesResponse = await request('project.workspaces.list', {
-          cwd: clonePath,
-        });
-
-        if (workspacesResponse.success && workspacesResponse.data?.workspaces) {
-          for (const workspace of workspacesResponse.data.workspaces) {
-            addWorkspace(workspace);
-          }
-        }
-      } catch (workspaceError) {
-        console.error('Failed to load workspaces:', workspaceError);
-      }
-
-      // Show success toast
-      toastManager.add({
-        title: 'Repository cloned',
-        description: `Successfully cloned ${repoData.name}`,
-        type: 'success',
-      });
-    } catch (error) {
-      console.error('[Clone] Error:', error);
-
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-
-      // Skip error toast if user cancelled
-      if (errorMessage.includes('cancelled by user')) {
-        // Show cancellation toast
-        toastManager.add({
-          title: 'Clone cancelled',
-          description: 'Repository clone operation has been cancelled',
-          type: 'info',
-        });
-        return;
-      }
-
-      let userFriendlyMessage = errorMessage;
-      if (errorMessage.includes('Git is not installed')) {
-        userFriendlyMessage =
-          'Git is not installed. Please install Git from https://git-scm.com/';
-      } else if (errorMessage.includes('timed out')) {
-        userFriendlyMessage =
-          'Clone operation timed out. The repository might be too large or the connection is slow. Please try again.';
-      } else if (
-        errorMessage.includes('Authentication failed') ||
-        errorMessage.includes('fatal: could not read')
-      ) {
-        // SSH or HTTPS authentication issues
-        if (url.startsWith('git@')) {
-          userFriendlyMessage =
-            'SSH authentication failed. Please ensure you have:\n' +
-            '1. SSH key configured (~/.ssh/id_rsa or id_ed25519)\n' +
-            '2. SSH key added to your Git provider (GitHub/GitLab)';
-        } else {
-          userFriendlyMessage =
-            'Authentication failed. This is a private repository.\n' +
-            "Please use SSH URL with configured SSH keys, or use 'git clone' in terminal to enter credentials.";
-        }
-      } else if (
-        errorMessage.includes('Permission denied') ||
-        errorMessage.includes('publickey')
-      ) {
-        userFriendlyMessage =
-          'SSH key not found or not authorized. Please:\n' +
-          '1. Generate SSH key: ssh-keygen -t ed25519\n' +
-          '2. Add public key to your Git provider\n' +
-          'Or use HTTPS URL for public repositories.';
-      }
-
-      toastManager.add({
-        title: 'Clone Failed',
-        description: userFriendlyMessage,
-        type: 'error',
-      });
-    } finally {
-      // Clean up event listener
-      if (unsubscribe) {
-        unsubscribe();
-      }
-      progressHandlerRef.current = null;
-
-      // Reset cloning state and notify completion
-      setIsCloning(false);
-      currentTaskIdRef.current = null;
-      onCloneComplete?.();
-    }
+    // Start cloning using the hook
+    await cloneUrl(url);
   };
 
   // Don't unmount component while cloning is in progress
