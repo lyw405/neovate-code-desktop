@@ -18,6 +18,7 @@ import {
 import { formatDistanceToNowStrict } from 'date-fns';
 import type { RepoData } from '../client/types/entities';
 import { useStore } from '../store';
+import { Spinner } from './ui/spinner';
 
 // Helper function to format relative time using date-fns
 function formatRelativeTime(timestamp: number): string {
@@ -90,6 +91,7 @@ export const RepoSidebar = ({
   const createSession = useStore((state) => state.createSession);
   const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useStore((state) => state.toggleSidebar);
+  const getSessionProcessing = useStore((state) => state.getSessionProcessing);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
@@ -382,6 +384,18 @@ export const RepoSidebar = ({
                                     ? `${session.summary.slice(0, 20)}…`
                                     : session.summary || 'New session';
 
+                                const processing = getSessionProcessing(
+                                  session.sessionId,
+                                );
+                                const isProcessing =
+                                  processing.status === 'processing';
+                                const isFailed = processing.status === 'failed';
+                                const textColor = isFailed
+                                  ? '#ef4444'
+                                  : isSessionSelected
+                                    ? 'var(--text-primary)'
+                                    : 'var(--text-tertiary)';
+
                                 return (
                                   <div
                                     key={session.sessionId}
@@ -390,9 +404,7 @@ export const RepoSidebar = ({
                                       backgroundColor: isSessionSelected
                                         ? 'var(--bg-base)'
                                         : 'transparent',
-                                      color: isSessionSelected
-                                        ? 'var(--text-primary)'
-                                        : 'var(--text-tertiary)',
+                                      color: textColor,
                                     }}
                                     onMouseEnter={(e) => {
                                       if (!isSessionSelected) {
@@ -411,11 +423,15 @@ export const RepoSidebar = ({
                                       selectSession(session.sessionId);
                                     }}
                                   >
-                                    <HugeiconsIcon
-                                      icon={Comment01Icon}
-                                      size={14}
-                                      strokeWidth={1.5}
-                                    />
+                                    {isProcessing ? (
+                                      <Spinner className="size-3.5" />
+                                    ) : (
+                                      <HugeiconsIcon
+                                        icon={Comment01Icon}
+                                        size={14}
+                                        strokeWidth={1.5}
+                                      />
+                                    )}
                                     <span className="flex-1 text-xs truncate">
                                       {displaySummary}
                                     </span>
