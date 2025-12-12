@@ -4,11 +4,24 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Custom semantic colors */
+  --bg-base: #fafafa;
   --bg-primary: #ffffff;
-  --bg-surface: #fafafa;
-  --border-subtle: #eaeaea;
+  --bg-elevated: #fafafa;
+  --bg-surface: #f5f5f5;
+  --bg-subtle: #f9f9f9;
+  --border-subtle: #e5e5e5;
+  --border-elevated: #d4d4d8;
   --text-primary: #171717;
-  --text-secondary: #666666;
+  --text-secondary: #737373;
+  --text-tertiary: #a3a3a3;
+  --text-muted: #d4d4d8;
+  --brand-primary: #3b82f6;
+  /* Interactive states */
+  --bg-hover: #f5f5f5;
+  --bg-active: #e5e5e5;
+  --border-focus: #3b82f6;
+  --border-hover: #d4d4d8;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.13 0.028 261.692);
@@ -87,6 +100,24 @@
 }
 
 .dark {
+  /* Custom semantic colors for dark mode */
+  --bg-base: #0a0a0a;
+  --bg-primary: #18181b;
+  --bg-elevated: #1f1f22;
+  --bg-surface: #27272a;
+  --bg-subtle: #151515;
+  --border-subtle: #3f3f46;
+  --border-elevated: #52525b;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  --text-muted: #52525b;
+  --brand-primary: #60a5fa;
+  /* Interactive states */
+  --bg-hover: #2a2a2a;
+  --bg-active: #3a3a3a;
+  --border-focus: #60a5fa;
+  --border-hover: #52525b;
   --background: oklch(0.13 0.028 261.692);
   --foreground: oklch(0.985 0.002 247.839);
   --card: oklch(0.21 0.034 264.665);
@@ -125,6 +156,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

@@ -29,20 +29,56 @@ function App() {
   useEffect(() => {
     const root = document.documentElement;
 
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else if (theme === 'light') {
-      root.classList.remove('dark');
-    } else {
-      // System preference
-      const prefersDark = window.matchMedia(
-        '(prefers-color-scheme: dark)',
-      ).matches;
-      if (prefersDark) {
+    const applyTheme = (isDark: boolean) => {
+      if (isDark) {
         root.classList.add('dark');
       } else {
         root.classList.remove('dark');
       }
+    };
+
+    try {
+      if (theme === 'dark') {
+        applyTheme(true);
+      } else if (theme === 'light') {
+        applyTheme(false);
+      } else {
+        // System preference with error handling
+        if (typeof window.matchMedia === 'undefined') {
+          console.warn('matchMedia not supported, falling back to light theme');
+          applyTheme(false);
+          return;
+        }
+
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        applyTheme(mediaQuery.matches);
+
+        // Listen for system theme changes
+        const handleChange = (e: MediaQueryListEvent) => {
+          applyTheme(e.matches);
+        };
+
+        // Add event listener with compatibility check
+        if (mediaQuery.addEventListener) {
+          mediaQuery.addEventListener('change', handleChange);
+        } else if (mediaQuery.addListener) {
+          // Fallback for older browsers
+          mediaQuery.addListener(handleChange);
+        }
+
+        // Cleanup listener on unmount or theme change
+        return () => {
+          if (mediaQuery.removeEventListener) {
+            mediaQuery.removeEventListener('change', handleChange);
+          } else if (mediaQuery.removeListener) {
+            // Fallback for older browsers
+            mediaQuery.removeListener(handleChange);
+          }
+        };
+      }
+    } catch (error) {
+      console.error('Theme setup failed:', error);
+      applyTheme(false); // Safe fallback to light theme
     }
   }, [theme, globalConfig]);
 

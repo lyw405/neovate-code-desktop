@@ -1,50 +1,68 @@
-/* Add some basic styling for our components */
+/* Component color utilities using CSS variables */
 .bg-gray-900 {
-  background-color: #111827;
-}
-
-.bg-gray-800 {
-  background-color: #1f2937;
+  background-color: var(--bg-base);
 }
 
 .bg-gray-850 {
-  background-color: #1a202c;
+  background-color: var(--bg-primary);
+}
+
+.bg-gray-800 {
+  background-color: var(--bg-elevated);
 }
 
 .bg-gray-700 {
-  background-color: #374151;
+  background-color: var(--bg-surface);
 }
 
 .bg-gray-600 {
-  background-color: #4b5563;
+  background-color: var(--bg-subtle);
 }
 
 .text-gray-200 {
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 
 .text-gray-300 {
-  color: #d1d5db;
+  color: var(--text-secondary);
 }
 
 .text-gray-400 {
-  color: #9ca3af;
+  color: var(--text-tertiary);
 }
 
 .text-gray-500 {
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .border-gray-700 {
-  border-color: #374151;
+  border-color: var(--border-subtle);
 }
 
 .border-gray-800 {
-  border-color: #1f2937;
+  border-color: var(--border-elevated);
 }
 
 .border-gray-850 {
-  border-color: #1a202c;
+  border-color: var(--border-elevated);
+}
+
+/* Interactive state utilities */
+.hover-bg:hover {
+  background-color: var(--bg-hover);
+}
+
+.active-bg:active {
+  background-color: var(--bg-active);
+}
+
+.focus-border:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+.hover-border:hover {
+  border-color: var(--border-hover);
 }
 
 /* Markdown content styling */
@@ -198,6 +216,7 @@
     opacity: 1;
     filter: brightness(1);
   }
+
   50% {
     opacity: 0.7;
     filter: brightness(1.3);
