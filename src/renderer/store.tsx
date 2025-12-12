@@ -626,7 +626,7 @@ const useStore = create<Store>()((set, get) => ({
 
     try {
       // Transform params to backend format
-      const planModeBoolean = params.planMode !== 'plan';
+      const planModeBoolean = params.planMode === 'plan';
       const thinking = params.think ? { effect: params.think } : undefined;
 
       const response = await request('session.send', {
